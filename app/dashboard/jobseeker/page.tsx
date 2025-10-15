@@ -145,7 +145,7 @@ export default function JobSeekerDashboard() {
                 <Button
                   variant="ghost"
                   className="w-full justify-start"
-                  onClick={() => (window.location.href = "http://localhost:3000/jobs")}
+                  onClick={() => (window.location.href = "https://hrnrecruitment.netlify.app/jobs")}
                 >
                   <Search className="w-4 h-4 mr-2" />
                   Find Jobs
