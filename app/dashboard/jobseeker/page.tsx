@@ -112,6 +112,10 @@ export default function JobSeekerDashboard() {
       try {
         let token = localStorage.getItem("accessToken")
         const refresh = localStorage.getItem("refreshToken")
+        
+        console.log("🔍 Jobseeker Dashboard - Fetching profile...")
+        console.log("🔑 Token present:", !!token)
+        console.log("🔄 Refresh token present:", !!refresh)
 
         let response = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/profile/", {
           headers: {
@@ -119,19 +123,25 @@ export default function JobSeekerDashboard() {
             Authorization: `Bearer ${token}`,
           },
         })
+        
+        console.log("📡 Profile response status:", response.status)
 
         // 🔁 Token refresh logic
         if (response.status === 401 && refresh) {
+          console.log("🔄 Token expired, attempting refresh...")
           const refreshResponse = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/refresh/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ refresh }),
           })
+          
+          console.log("🔄 Refresh response status:", refreshResponse.status)
 
           if (refreshResponse.ok) {
             const newTokens = await refreshResponse.json()
             localStorage.setItem("accessToken", newTokens.access)
             token = newTokens.access
+            console.log("✅ Token refreshed successfully")
 
             // Retry fetch
             response = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/profile/", {
@@ -140,7 +150,9 @@ export default function JobSeekerDashboard() {
                 Authorization: `Bearer ${token}`,
               },
             })
+            console.log("🔄 Retry response status:", response.status)
           } else {
+            console.log("❌ Token refresh failed")
             throw new Error("Session expired")
           }
         }
@@ -162,9 +174,16 @@ export default function JobSeekerDashboard() {
         })
       } catch (err) {
         console.error("Profile fetch error:", err)
-        localStorage.removeItem("accessToken")
-        localStorage.removeItem("refreshToken")
-        window.location.href = "/login"
+        // Only redirect to login if it's actually an authentication error
+        if (err.message && err.message.includes("401")) {
+          console.log("Authentication failed, redirecting to login")
+          localStorage.removeItem("accessToken")
+          localStorage.removeItem("refreshToken")
+          window.location.href = "/login"
+        } else {
+          console.log("Non-auth error, staying on dashboard:", err.message)
+          // Don't redirect for network errors or other issues
+        }
       }
     }
 
@@ -211,6 +230,9 @@ export default function JobSeekerDashboard() {
       
         let token = localStorage.getItem("accessToken")
         const refresh = localStorage.getItem("refreshToken")
+        
+        console.log("🔍 Jobseeker Dashboard - Fetching applications...")
+        console.log("🔑 Token present:", !!token)
 
         let res = await fetch("https://1f657a1b9206.ngrok-free.app/api/jobs/applications/", {
           headers: {
@@ -218,6 +240,8 @@ export default function JobSeekerDashboard() {
             "ngrok-skip-browser-warning": "true",
           },
         })
+        
+        console.log("📡 Applications response status:", res.status)
 
         // 🔁 Refresh token if unauthorized
         if (res.status === 401 && refresh) {
@@ -250,9 +274,16 @@ export default function JobSeekerDashboard() {
         setApplications(data)
       } catch (error) {
         console.error("Applications fetch error:", error)
-        localStorage.removeItem("accessToken")
-        localStorage.removeItem("refreshToken")
-        window.location.href = "/login"
+        // Only redirect to login if it's actually an authentication error
+        if (error.message && error.message.includes("401")) {
+          console.log("Authentication failed in applications fetch, redirecting to login")
+          localStorage.removeItem("accessToken")
+          localStorage.removeItem("refreshToken")
+          window.location.href = "/login"
+        } else {
+          console.log("Non-auth error in applications fetch, staying on dashboard:", error.message)
+          // Don't redirect for network errors or other issues
+        }
       } finally {
         setLoadingApps(false)
       setRefreshing(false)
