@@ -95,7 +95,7 @@ export default function JobManagementPage() {
     const refresh = localStorage.getItem("refreshToken")
     if (!refresh) return null
     try {
-      const res = await fetch("https://eedf83f6497e.ngrok-free.app/api/accounts/refresh/", {
+      const res = await fetch("http://localhost:8000/api/accounts/refresh/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh }),
@@ -130,7 +130,7 @@ export default function JobManagementPage() {
   // ---------- FETCH DATA ----------
   const fetchJobs = async () => {
     try {
-      const res = await authorizedFetch("https://eedf83f6497e.ngrok-free.app/api/jobs/admin/all/")
+      const res = await authorizedFetch("http://localhost:8000/api/jobs/admin/all/")
       if (!res.ok) throw new Error("Failed to fetch jobs")
       setJobs(await res.json())
     } catch {
@@ -140,7 +140,7 @@ export default function JobManagementPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch("https://eedf83f6497e.ngrok-free.app/api/jobs/categories/")
+      const res = await fetch("http://localhost:8000/api/jobs/categories/")
       if (!res.ok) throw new Error("Failed to fetch categories")
       setCategories(await res.json())
     } catch {
@@ -150,7 +150,7 @@ export default function JobManagementPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await authorizedFetch("https://eedf83f6497e.ngrok-free.app/api/users/")
+      const res = await authorizedFetch("http://localhost:8000/api/users/")
       if (!res.ok) throw new Error("Failed to fetch users")
       setUsers(await res.json())
     } catch {
@@ -160,7 +160,7 @@ export default function JobManagementPage() {
 
   const fetchProfile = async () => {
     try {
-      const res = await authorizedFetch("https://eedf83f6497e.ngrok-free.app/api/accounts/profile/")
+      const res = await authorizedFetch("http://localhost:8000/api/accounts/profile/")
       if (!res.ok) throw new Error("Failed to fetch profile")
       setProfile(await res.json())
     } catch {
@@ -170,7 +170,7 @@ export default function JobManagementPage() {
 
   const fetchApplications = async () => {
     try {
-      const res = await authorizedFetch("https://eedf83f6497e.ngrok-free.app/api/jobs/applications/all/")
+      const res = await authorizedFetch("http://localhost:8000/api/jobs/applications/all/")
       if (!res.ok) throw new Error("Failed to fetch job applications")
       setApplications(await res.json())
     } catch {
@@ -182,7 +182,7 @@ export default function JobManagementPage() {
   const updateApplicationStatus = async (applicationId: number, status: string) => {
     setLoading(true)
     try {
-      const res = await authorizedFetch(`https://eedf83f6497e.ngrok-free.app/api/jobs/applications/update/${applicationId}/`, {
+      const res = await authorizedFetch(`http://localhost:8000/api/jobs/applications/update/${applicationId}/`, {
         method: "PATCH",
         body: JSON.stringify({ status }),
       })
@@ -210,7 +210,7 @@ export default function JobManagementPage() {
     setLoading(true)
     setShowDeleteConfirm(false)
     try {
-      const res = await authorizedFetch(`https://eedf83f6497e.ngrok-free.app/api/jobs/update/${jobToDelete}/`, {
+      const res = await authorizedFetch(`http://localhost:8000/api/jobs/update/${jobToDelete}/`, {
         method: "DELETE",
       })
       
@@ -230,7 +230,7 @@ export default function JobManagementPage() {
   const toggleJobStatus = async (jobId: number, currentStatus: boolean) => {
     setLoading(true)
     try {
-      const res = await authorizedFetch(`https://eedf83f6497e.ngrok-free.app/api/jobs/update/${jobId}/`, {
+      const res = await authorizedFetch(`http://localhost:8000/api/jobs/update/${jobId}/`, {
         method: "PATCH",
         body: JSON.stringify({ is_active: !currentStatus }),
       })
@@ -257,7 +257,7 @@ export default function JobManagementPage() {
     
     setLoading(true)
     try {
-      const res = await authorizedFetch(`https://eedf83f6497e.ngrok-free.app/api/jobs/update/${editingJob.id}/`, {
+      const res = await authorizedFetch(`http://localhost:8000/api/jobs/update/${editingJob.id}/`, {
         method: "PATCH",
         body: JSON.stringify(editingJob),
       })
@@ -284,7 +284,7 @@ export default function JobManagementPage() {
   const toggleUserStatus = async (userId: number, currentStatus: boolean) => {
     setLoading(true)
     try {
-      const res = await authorizedFetch(`https://eedf83f6497e.ngrok-free.app/api/accounts/users/${userId}/`, {
+      const res = await authorizedFetch(`http://localhost:8000/api/accounts/users/${userId}/`, {
         method: "PATCH",
         body: JSON.stringify({ is_active: !currentStatus }),
       })
@@ -321,7 +321,7 @@ export default function JobManagementPage() {
     try {
       const payload = { ...newJob, category_id: newJob.category }
 
-      const res = await authorizedFetch("https://eedf83f6497e.ngrok-free.app/api/jobs/create/", {
+      const res = await authorizedFetch("http://localhost:8000/api/jobs/create/", {
         method: "POST",
         body: JSON.stringify(payload),
       })
@@ -360,11 +360,10 @@ export default function JobManagementPage() {
       
       // Call backend logout endpoint
       if (refreshToken) {
-        await fetch("https://eedf83f6497e.ngrok-free.app/api/accounts/logout/", {
+        await fetch("http://localhost:8000/api/accounts/logout/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "true",
           },
           body: JSON.stringify({ refresh_token: refreshToken }),
         })

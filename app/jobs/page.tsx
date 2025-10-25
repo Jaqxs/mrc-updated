@@ -40,7 +40,7 @@ export default function JobsPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
 
-  const API_BASE = "https://eedf83f6497e.ngrok-free.app/api"
+  const API_BASE = "http://localhost:8000/api"
 
   // Check login status
   useEffect(() => {
@@ -62,7 +62,6 @@ export default function JobsPage() {
           mode: "cors",
           headers: {
             "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "true",
           },
         })
 
@@ -187,11 +186,10 @@ export default function JobsPage() {
                         
                         // Call backend logout endpoint
                         if (refreshToken) {
-                          await fetch("https://eedf83f6497e.ngrok-free.app/api/accounts/logout/", {
+                          await fetch("http://localhost:8000/api/accounts/logout/", {
                             method: "POST",
                             headers: {
                               "Content-Type": "application/json",
-                              "ngrok-skip-browser-warning": "true",
                             },
                             body: JSON.stringify({ refresh_token: refreshToken }),
                           })

@@ -117,7 +117,6 @@ export default function JobSeekerDashboard() {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
-            "ngrok-skip-browser-warning": "true",
           },
         })
 
@@ -139,7 +138,6 @@ export default function JobSeekerDashboard() {
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
-                "ngrok-skip-browser-warning": "true",
               },
             })
           } else {

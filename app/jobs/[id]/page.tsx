@@ -56,8 +56,8 @@ export default function JobDetails() {
     if (!jobId) return
     async function fetchJob() {
       try {
-        const res = await fetch(`https://eedf83f6497e.ngrok-free.app/api/jobs/${jobId}/`, {
-          headers: { "ngrok-skip-browser-warning": "true" },
+        const res = await fetch(`http://localhost:8000/api/jobs/${jobId}/`, {
+          headers: { "Content-Type": "application/json" },
         })
         if (!res.ok) throw new Error("Failed to fetch job details")
         const data = await res.json()
