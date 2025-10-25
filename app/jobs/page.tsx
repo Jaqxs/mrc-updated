@@ -40,7 +40,7 @@ export default function JobsPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
 
-  const API_BASE = "http://localhost:8000/api"
+  const API_BASE = "https://1f657a1b9206.ngrok-free.app/api"
 
   // Check login status
   useEffect(() => {
@@ -186,7 +186,7 @@ export default function JobsPage() {
                         
                         // Call backend logout endpoint
                         if (refreshToken) {
-                          await fetch("http://localhost:8000/api/accounts/logout/", {
+                          await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/logout/", {
                             method: "POST",
                             headers: {
                               "Content-Type": "application/json",

@@ -56,7 +56,7 @@ export default function JobDetails() {
     if (!jobId) return
     async function fetchJob() {
       try {
-        const res = await fetch(`http://localhost:8000/api/jobs/${jobId}/`, {
+        const res = await fetch(`https://1f657a1b9206.ngrok-free.app/api/jobs/${jobId}/`, {
           headers: { "Content-Type": "application/json" },
         })
         if (!res.ok) throw new Error("Failed to fetch job details")
@@ -124,7 +124,7 @@ export default function JobDetails() {
       payload.append("resume", formData.resume)
       payload.append("cover_letter", formData.coverLetter)
 
-      const res = await fetch("http://localhost:8000/api/jobs/applications/submit/", {
+      const res = await fetch("https://1f657a1b9206.ngrok-free.app/api/jobs/applications/submit/", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

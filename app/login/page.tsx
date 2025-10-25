@@ -34,7 +34,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const response = await fetch("http://localhost:8000/api/accounts/login/", {
+      const response = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, user_type: userType }),

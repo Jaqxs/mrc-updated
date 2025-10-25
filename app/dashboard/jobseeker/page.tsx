@@ -113,7 +113,7 @@ export default function JobSeekerDashboard() {
         let token = localStorage.getItem("accessToken")
         const refresh = localStorage.getItem("refreshToken")
 
-        let response = await fetch("http://localhost:8000/api/accounts/profile/", {
+        let response = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/profile/", {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -122,7 +122,7 @@ export default function JobSeekerDashboard() {
 
         // 🔁 Token refresh logic
         if (response.status === 401 && refresh) {
-          const refreshResponse = await fetch("http://localhost:8000/api/accounts/refresh/", {
+          const refreshResponse = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/refresh/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ refresh }),
@@ -134,7 +134,7 @@ export default function JobSeekerDashboard() {
             token = newTokens.access
 
             // Retry fetch
-            response = await fetch("http://localhost:8000/api/accounts/profile/", {
+            response = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/profile/", {
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
@@ -212,7 +212,7 @@ export default function JobSeekerDashboard() {
         let token = localStorage.getItem("accessToken")
         const refresh = localStorage.getItem("refreshToken")
 
-        let res = await fetch("http://localhost:8000/api/jobs/applications/", {
+        let res = await fetch("https://1f657a1b9206.ngrok-free.app/api/jobs/applications/", {
           headers: {
             Authorization: `Bearer ${token}`,
             "ngrok-skip-browser-warning": "true",
@@ -221,7 +221,7 @@ export default function JobSeekerDashboard() {
 
         // 🔁 Refresh token if unauthorized
         if (res.status === 401 && refresh) {
-          const refreshResponse = await fetch("http://localhost:8000/api/accounts/refresh/", {
+          const refreshResponse = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/refresh/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ refresh }),
@@ -233,7 +233,7 @@ export default function JobSeekerDashboard() {
             token = newTokens.access
 
             // Retry applications fetch
-            res = await fetch("http://localhost:8000/api/jobs/applications/", {
+            res = await fetch("https://1f657a1b9206.ngrok-free.app/api/jobs/applications/", {
               headers: {
                 Authorization: `Bearer ${token}`,
                 "ngrok-skip-browser-warning": "true",

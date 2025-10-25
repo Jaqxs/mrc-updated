@@ -64,7 +64,7 @@ export default function RegisterPage() {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      const response = await fetch("http://localhost:8000/api/accounts/register/", {
+      const response = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/register/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
