@@ -37,8 +37,21 @@ export default function JobsPage() {
   const [filterCategory, setFilterCategory] = useState("All Categories")
   const [savedJobs, setSavedJobs] = useState<number[]>([])
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userRole, setUserRole] = useState<string | null>(null)
 
-  const API_BASE = "https://16564f45d94b.ngrok-free.app/api"
+  const API_BASE = "http://127.0.0.1:8000/api"
+
+  // Check login status
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken")
+    const role = localStorage.getItem("role")
+    
+    if (token) {
+      setIsLoggedIn(true)
+      setUserRole(role)
+    }
+  }, [])
 
   // ✅ Fetch backend jobs safely
   useEffect(() => {
@@ -159,21 +172,75 @@ export default function JobsPage() {
             </nav>
 
             <div className="hidden md:flex items-center space-x-4">
-              <Button variant="ghost" asChild className="text-gray-600 hover:text-blue-600">
-                <Link href="/login">Sign In</Link>
-              </Button>
-              <Button
-                asChild
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-              >
-                <Link href="/register">Get Started</Link>
-              </Button>
+              {isLoggedIn ? (
+                <>
+                  <Button variant="ghost" asChild className="text-gray-600 hover:text-blue-600">
+                    <Link href={userRole === 'admin' || userRole === 'staff' ? '/dashboard/admin' : '/dashboard/jobseeker'}>
+                      My Dashboard
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        const refreshToken = localStorage.getItem("refreshToken")
+                        
+                        // Call backend logout endpoint
+                        if (refreshToken) {
+                          await fetch("http://127.0.0.1:8000/api/accounts/logout/", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              "ngrok-skip-browser-warning": "true",
+                            },
+                            body: JSON.stringify({ refresh_token: refreshToken }),
+                          })
+                        }
+                      } catch (error) {
+                        console.error("Logout error:", error)
+                      } finally {
+                        // Clear frontend storage
+                        localStorage.removeItem("accessToken")
+                        localStorage.removeItem("refreshToken")
+                        localStorage.removeItem("role")
+                        localStorage.removeItem("email")
+                        localStorage.removeItem("first_name")
+                        setIsLoggedIn(false)
+                        setUserRole(null)
+                      }
+                    }}
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" asChild className="text-gray-600 hover:text-blue-600">
+                    <Link href="/login">Sign In</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  >
+                    <Link href="/register">Get Started</Link>
+                  </Button>
+                </>
+              )}
             </div>
 
             <div className="flex items-center space-x-2 md:hidden">
-              <Button variant="ghost" size="sm" asChild className="text-xs px-2">
-                <Link href="/login">Sign In</Link>
-              </Button>
+              {isLoggedIn ? (
+                <Button variant="ghost" size="sm" asChild className="text-xs px-2">
+                  <Link href={userRole === 'admin' || userRole === 'staff' ? '/dashboard/admin' : '/dashboard/jobseeker'}>
+                    Dashboard
+                  </Link>
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" asChild className="text-xs px-2">
+                  <Link href="/login">Sign In</Link>
+                </Button>
+              )}
               <Button variant="ghost" size="sm" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2">
                 {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </Button>

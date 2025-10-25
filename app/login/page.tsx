@@ -34,7 +34,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const response = await fetch("https://16564f45d94b.ngrok-free.app/api/accounts/login/", {
+      const response = await fetch("http://localhost:8000/api/accounts/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, user_type: userType }),
@@ -53,7 +53,21 @@ export default function LoginPage() {
       localStorage.setItem("email", data.email)
       localStorage.setItem("first_name", data.first_name)
 
-      window.location.href = data.redirect || "/"
+      // Check if there's a specific job ID in the URL to redirect back to
+      const urlParams = new URLSearchParams(window.location.search)
+      const jobId = urlParams.get('job_id')
+      
+      if (jobId) {
+        // Redirect back to the specific job they wanted to apply for
+        window.location.href = `/jobs/${jobId}`
+      } else {
+        // Default redirect based on user type
+        if (data.role === 'admin' || data.role === 'staff') {
+          window.location.href = "/dashboard/admin"
+        } else {
+          window.location.href = "/dashboard/jobseeker"
+        }
+      }
     } catch (error) {
       console.error("Login error:", error)
       alert("⚠️ Something went wrong. Please try again later.")

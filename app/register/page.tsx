@@ -31,7 +31,7 @@ import Link from "next/link"
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [step, setStep] = useState(1)
-  const [loading, setLoading] = useState(false) // ✅ added
+  const [loading, setLoading] = useState(false) 
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -64,7 +64,7 @@ export default function RegisterPage() {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      const response = await fetch("https://16564f45d94b.ngrok-free.app/api/accounts/register/", {
+      const response = await fetch("http://localhost:8000/api/accounts/register/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

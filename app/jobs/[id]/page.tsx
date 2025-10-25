@@ -7,9 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, MapPin, Briefcase, Clock, ArrowRight } from "lucide-react"
-import Link from "next/link"
+import { ArrowLeft, MapPin, Briefcase, Clock, ArrowRight, CheckCircle } from "lucide-react"
 
 export default function JobDetails() {
   const params = useParams()
@@ -17,26 +15,56 @@ export default function JobDetails() {
   const jobId = params?.id
   const [job, setJob] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [hasApplied, setHasApplied] = useState(false)
+  const [applicationStatus, setApplicationStatus] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    resume: null,
-    coverLetter: "",
+    resume: null as File | null,
+    coverLetter: null as File | null,
   })
 
+  // ✅ Check if user has already applied
+  const checkApplicationStatus = async () => {
+    const token = localStorage.getItem("accessToken")
+    if (!token) return
+
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/jobs/applications/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "ngrok-skip-browser-warning": "true",
+        },
+      })
+      if (res.ok) {
+        const applications = await res.json()
+        const existingApplication = applications.find((app: any) => app.job === parseInt(jobId as string))
+        if (existingApplication) {
+          setHasApplied(true)
+          setApplicationStatus(existingApplication.status)
+        }
+      }
+    } catch (error) {
+      console.error("Error checking application status:", error)
+    }
+  }
+
+  // ✅ Fetch job details
   useEffect(() => {
     if (!jobId) return
     async function fetchJob() {
       try {
-        const res = await fetch(`https://16564f45d94b.ngrok-free.app/api/jobs/${jobId}/`, {
-          headers: {
-            "ngrok-skip-browser-warning": "true",
-          },
+        const res = await fetch(`http://127.0.0.1:8000/api/jobs/${jobId}/`, {
+          headers: { "ngrok-skip-browser-warning": "true" },
         })
         if (!res.ok) throw new Error("Failed to fetch job details")
         const data = await res.json()
         setJob(data)
+        
+        // Check if user has already applied
+        await checkApplicationStatus()
       } catch (error) {
         console.error(error)
       } finally {
@@ -46,20 +74,82 @@ export default function JobDetails() {
     fetchJob()
   }, [jobId])
 
-  const handleChange = (e: any) => {
-    const { name, value, type, files } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "file" ? files[0] : value,
-    }))
+  // ✅ Form change handler
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target
+    if (type === "file") {
+      const fileInput = e.target as HTMLInputElement
+      const file = fileInput.files ? fileInput.files[0] : null
+      if (name === "resume") {
+        setFormData((prev) => ({ ...prev, resume: file }))
+      } else if (name === "coverLetter") {
+        setFormData((prev) => ({ ...prev, coverLetter: file }))
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }))
+    }
   }
 
-  const handleSubmit = (e: any) => {
+  // ✅ Submit job application
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Form Data:", formData)
-    alert("✅ Application submitted successfully!")
+    setSubmitting(true)
+
+    const token = localStorage.getItem("accessToken")
+    if (!token) {
+      alert("Please log in to submit your application.")
+      router.push(`/login?job_id=${jobId}`)
+      return
+    }
+
+    try {
+      if (!formData.resume) {
+        alert("Please upload your resume before submitting.")
+        setSubmitting(false)
+        return
+      }
+
+      if (!formData.coverLetter) {
+        alert("Please upload your cover letter before submitting.")
+        setSubmitting(false)
+        return
+      }
+
+      // ✅ Django expects job as integer, resume and cover letter as files
+      const payload = new FormData()
+      payload.append("job", String(jobId)) // convert to string for Django
+      payload.append("name", formData.name)
+      payload.append("email", formData.email)
+      payload.append("phone", formData.phone)
+      payload.append("resume", formData.resume)
+      payload.append("cover_letter", formData.coverLetter)
+
+      const res = await fetch("http://localhost:8000/api/jobs/applications/submit/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: payload, // ✅ no manual Content-Type
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        console.error("Error response:", errorData)
+        throw new Error(errorData.detail || JSON.stringify(errorData))
+      }
+
+      alert("✅ Application submitted successfully!")
+      router.push("/dashboard/jobseeker")
+    } catch (err: any) {
+      console.error("Submit error:", err)
+      alert(`❌ ${err.message}`)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
+  // ✅ Loading state
   if (loading) {
     return (
       <div className="text-center py-16 text-gray-500">
@@ -68,6 +158,7 @@ export default function JobDetails() {
     )
   }
 
+  // ✅ Job not found
   if (!job) {
     return (
       <div className="text-center py-16 text-gray-500">
@@ -79,11 +170,16 @@ export default function JobDetails() {
     )
   }
 
+  // ✅ Page content
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Back Button */}
       <div className="mb-6">
-        <Button variant="ghost" onClick={() => router.push("/jobs")} className="flex items-center text-blue-600">
+        <Button
+          variant="ghost"
+          onClick={() => router.push("/jobs")}
+          className="flex items-center text-blue-600"
+        >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Job Listings
         </Button>
@@ -122,7 +218,9 @@ export default function JobDetails() {
               </span>
             )}
             {job.visa && (
-              <span className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium">{job.visa}</span>
+              <span className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
+                {job.visa}
+              </span>
             )}
           </div>
         </CardContent>
@@ -131,11 +229,50 @@ export default function JobDetails() {
       {/* ✅ Application Form Section */}
       <Card className="shadow-md border-blue-100">
         <CardHeader className="p-6 border-b">
-          <CardTitle className="text-xl font-bold">Apply for this job</CardTitle>
-          <CardDescription>Fill out the form below to submit your application</CardDescription>
+          <CardTitle className="text-xl font-bold">
+            {hasApplied ? "Application Status" : "Apply for this job"}
+          </CardTitle>
+          <CardDescription>
+            {hasApplied 
+              ? `You have already applied for this position. Current status: ${applicationStatus || 'Pending'}`
+              : "Fill out the form below to submit your application"
+            }
+          </CardDescription>
         </CardHeader>
         <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {hasApplied ? (
+            <div className="text-center py-8">
+              <div className="mb-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Application Submitted!</h3>
+                <p className="text-gray-600 mb-4">
+                  Your application has been submitted successfully. You can track your application status in your dashboard.
+                </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-blue-800">
+                    <strong>Status:</strong> {applicationStatus || 'Pending'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  onClick={() => router.push('/dashboard/jobseeker')}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  View My Applications
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push('/jobs')}
+                >
+                  Browse More Jobs
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="name">Full Name</Label>
               <Input
@@ -148,6 +285,7 @@ export default function JobDetails() {
                 required
               />
             </div>
+
             <div>
               <Label htmlFor="email">Email Address</Label>
               <Input
@@ -160,6 +298,7 @@ export default function JobDetails() {
                 required
               />
             </div>
+
             <div>
               <Label htmlFor="phone">Phone Number</Label>
               <Input
@@ -172,26 +311,41 @@ export default function JobDetails() {
                 required
               />
             </div>
+
             <div>
               <Label htmlFor="resume">Resume (PDF/DOCX)</Label>
-              <Input type="file" id="resume" name="resume" accept=".pdf,.docx" onChange={handleChange} required />
-            </div>
-            <div>
-              <Label htmlFor="coverLetter">Cover Letter</Label>
-              <Textarea
-                id="coverLetter"
-                name="coverLetter"
-                placeholder="Write your cover letter"
-                value={formData.coverLetter}
+              <Input
+                type="file"
+                id="resume"
+                name="resume"
+                accept=".pdf,.docx"
                 onChange={handleChange}
-                rows={5}
+                required
               />
             </div>
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-              Submit Application
-              <ArrowRight className="ml-2 w-4 h-4" />
+
+            <div>
+              <Label htmlFor="coverLetter">Cover Letter (PDF/DOCX)</Label>
+              <Input
+                type="file"
+                id="coverLetter"
+                name="coverLetter"
+                accept=".pdf,.docx"
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+            >
+              {submitting ? "Submitting..." : "Submit Application"}
+              {!submitting && <ArrowRight className="ml-2 w-4 h-4" />}
             </Button>
           </form>
+          )}
         </CardContent>
       </Card>
     </div>

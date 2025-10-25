@@ -43,6 +43,9 @@ export default function HomePage() {
   const [animatedStats, setAnimatedStats] = useState([0, 0, 0, 0])
   const [isVisible, setIsVisible] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
 
   const heroSlides = [
     {
@@ -71,7 +74,7 @@ export default function HomePage() {
 
   const quickLinks = [
     { title: "Browse Jobs", href: "/jobs", icon: Briefcase, color: "from-blue-500 to-blue-600" },
-    { title: "Submit Application", href: "/jobs/apply", icon: UserCheck, color: "from-green-500 to-green-600" },
+    { title: "Find Jobs", href: "/jobs", icon: UserCheck, color: "from-green-500 to-green-600" },
     { title: "Career Resources", href: "/resources", icon: GraduationCap, color: "from-purple-500 to-purple-600" },
     { title: "Contact Recruiters", href: "/contact", icon: Phone, color: "from-orange-500 to-orange-600" },
   ]
@@ -145,6 +148,19 @@ export default function HomePage() {
       image: "bg-gradient-to-br from-purple-500 to-purple-600",
     },
   ]
+
+  // Check login status
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken")
+    const role = localStorage.getItem("role")
+    const firstName = localStorage.getItem("first_name")
+    
+    if (token) {
+      setIsLoggedIn(true)
+      setUserRole(role)
+      setUserName(firstName)
+    }
+  }, [])
 
   // Auto-slide hero carousel
   useEffect(() => {
@@ -270,28 +286,81 @@ export default function HomePage() {
             </nav>
 
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 hover:scale-105 bg-transparent text-xs sm:text-sm px-2 sm:px-4"
-                asChild
-              >
-                <Link href="/login">
-                  <span className="hidden sm:inline">Job Seeker Login</span>
-                  <span className="sm:hidden">Login</span>
-                </Link>
-              </Button>
-              <Button
-                size="sm"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-purple-600 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-xs sm:text-sm px-2 sm:px-4"
-                asChild
-              >
-                <Link href="/register">
-                  <span className="hidden sm:inline">Find Jobs Now</span>
-                  <span className="sm:hidden">Jobs</span>
-                  <Zap className="ml-1 sm:ml-2 w-3 h-3 sm:w-4 sm:h-4" />
-                </Link>
-              </Button>
+              {isLoggedIn ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 hover:scale-105 bg-transparent text-xs sm:text-sm px-2 sm:px-4"
+                    asChild
+                  >
+                    <Link href={userRole === 'admin' || userRole === 'staff' ? '/dashboard/admin' : '/dashboard/jobseeker'}>
+                      <span className="hidden sm:inline">My Dashboard</span>
+                      <span className="sm:hidden">Dashboard</span>
+                    </Link>
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-emerald-600 hover:to-green-600 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-xs sm:text-sm px-2 sm:px-4"
+                    onClick={async () => {
+                      try {
+                        const refreshToken = localStorage.getItem("refreshToken")
+                        
+                        // Call backend logout endpoint
+                        if (refreshToken) {
+                          await fetch("http://127.0.0.1:8000/api/accounts/logout/", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              "ngrok-skip-browser-warning": "true",
+                            },
+                            body: JSON.stringify({ refresh_token: refreshToken }),
+                          })
+                        }
+                      } catch (error) {
+                        console.error("Logout error:", error)
+                      } finally {
+                        // Clear frontend storage
+                        localStorage.removeItem("accessToken")
+                        localStorage.removeItem("refreshToken")
+                        localStorage.removeItem("role")
+                        localStorage.removeItem("email")
+                        localStorage.removeItem("first_name")
+                        window.location.reload()
+                      }
+                    }}
+                  >
+                    <span className="hidden sm:inline">Sign Out</span>
+                    <span className="sm:hidden">Out</span>
+                    <Zap className="ml-1 sm:ml-2 w-3 h-3 sm:w-4 sm:h-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 hover:scale-105 bg-transparent text-xs sm:text-sm px-2 sm:px-4"
+                    asChild
+                  >
+                    <Link href="/login">
+                      <span className="hidden sm:inline">Job Seeker Login</span>
+                      <span className="sm:hidden">Login</span>
+                    </Link>
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-purple-600 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-xs sm:text-sm px-2 sm:px-4"
+                    asChild
+                  >
+                    <Link href="/register">
+                      <span className="hidden sm:inline">Find Jobs Now</span>
+                      <span className="sm:hidden">Jobs</span>
+                      <Zap className="ml-1 sm:ml-2 w-3 h-3 sm:w-4 sm:h-4" />
+                    </Link>
+                  </Button>
+                </>
+              )}
 
               <Button
                 variant="ghost"
@@ -446,27 +515,60 @@ export default function HomePage() {
                     </div>
 
                     <div className="space-y-3 sm:space-y-4">
-                      <Button
-                        className="w-full h-12 sm:h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-purple-600 hover:to-blue-600 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                        asChild
-                      >
-                        <Link href="/register">
-                          <Users className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
-                          <span className="hidden sm:inline">Create Job Seeker Profile</span>
-                          <span className="sm:hidden">Create Profile</span>
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-300 hover:scale-105 bg-transparent"
-                        asChild
-                      >
-                        <Link href="/login">
-                          <Shield className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
-                          <span className="hidden sm:inline">Employer / Admin Login</span>
-                          <span className="sm:hidden">Admin Login</span>
-                        </Link>
-                      </Button>
+                      {isLoggedIn ? (
+                        <>
+                          <Button
+                            className="w-full h-12 sm:h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-purple-600 hover:to-blue-600 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                            asChild
+                          >
+                            <Link href={userRole === 'admin' || userRole === 'staff' ? '/dashboard/admin' : '/dashboard/jobseeker'}>
+                              <Users className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
+                              <span className="hidden sm:inline">Go to Dashboard</span>
+                              <span className="sm:hidden">Dashboard</span>
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl border-2 border-slate-200 hover:border-red-300 hover:bg-red-50 transition-all duration-300 hover:scale-105 bg-transparent"
+                            onClick={() => {
+                              localStorage.removeItem("accessToken")
+                              localStorage.removeItem("refreshToken")
+                              localStorage.removeItem("role")
+                              localStorage.removeItem("email")
+                              localStorage.removeItem("first_name")
+                              window.location.reload()
+                            }}
+                          >
+                            <Shield className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
+                            <span className="hidden sm:inline">Sign Out</span>
+                            <span className="sm:hidden">Sign Out</span>
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            className="w-full h-12 sm:h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-purple-600 hover:to-blue-600 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                            asChild
+                          >
+                            <Link href="/register">
+                              <Users className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
+                              <span className="hidden sm:inline">Create Job Seeker Profile</span>
+                              <span className="sm:hidden">Create Profile</span>
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-300 hover:scale-105 bg-transparent"
+                            asChild
+                          >
+                            <Link href="/login">
+                              <Shield className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
+                              <span className="hidden sm:inline">Employer / Admin Login</span>
+                              <span className="sm:hidden">Admin Login</span>
+                            </Link>
+                          </Button>
+                        </>
+                      )}
                     </div>
 
                     <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl sm:rounded-2xl border-2 border-green-200">
