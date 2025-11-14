@@ -83,7 +83,7 @@ export default function JobSeekerDashboard() {
       
       // Call backend logout endpoint
       if (refreshToken) {
-        await fetch("https://eedf83f6497e.ngrok-free.app/api/accounts/logout/", {
+        await fetch("https://61be114a8e8f.ngrok-free.app/api/accounts/logout/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -196,7 +196,7 @@ export default function JobSeekerDashboard() {
       const token = localStorage.getItem("accessToken")
       if (!token) return
 
-      const res = await fetch("https://eedf83f6497e.ngrok-free.app/api/accounts/profile/", {
+      const res = await fetch("https://61be114a8e8f.ngrok-free.app/api/accounts/profile/", {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
