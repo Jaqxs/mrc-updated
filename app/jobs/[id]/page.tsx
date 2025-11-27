@@ -57,7 +57,10 @@ export default function JobDetails() {
     async function fetchJob() {
       try {
         const res = await fetch(`https://1f657a1b9206.ngrok-free.app/api/jobs/${jobId}/`, {
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true"
+          },
         })
         if (!res.ok) throw new Error("Failed to fetch job details")
         const data = await res.json()
@@ -127,6 +130,7 @@ export default function JobDetails() {
       const res = await fetch("https://1f657a1b9206.ngrok-free.app/api/jobs/applications/submit/", {
         method: "POST",
         headers: {
+          "ngrok-skip-browser-warning": "true",
           Authorization: `Bearer ${token}`,
           "ngrok-skip-browser-warning": "true",
         },

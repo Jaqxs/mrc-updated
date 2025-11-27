@@ -97,7 +97,10 @@ export default function JobManagementPage() {
     try {
       const res = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/refresh/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true"
+        },
         body: JSON.stringify({ refresh }),
       })
       if (!res.ok) throw new Error("Failed to refresh token")
@@ -115,6 +118,7 @@ export default function JobManagementPage() {
       ...options.headers,
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
     }
     let res = await fetch(url, { ...options, headers })
     if (res.status === 401) {
@@ -140,7 +144,11 @@ export default function JobManagementPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch("https://1f657a1b9206.ngrok-free.app/api/jobs/categories/")
+      const res = await fetch("https://1f657a1b9206.ngrok-free.app/api/jobs/categories/", {
+        headers: {
+          "ngrok-skip-browser-warning": "true",
+        },
+      })
       if (!res.ok) throw new Error("Failed to fetch categories")
       setCategories(await res.json())
     } catch {
@@ -364,6 +372,7 @@ export default function JobManagementPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
           },
           body: JSON.stringify({ refresh_token: refreshToken }),
         })

@@ -313,6 +313,7 @@ export default function HomePage() {
                             headers: {
                               "Content-Type": "application/json",
                               "ngrok-skip-browser-warning": "true",
+                              "ngrok-skip-browser-warning": "true",
                             },
                             body: JSON.stringify({ refresh_token: refreshToken }),
                           })

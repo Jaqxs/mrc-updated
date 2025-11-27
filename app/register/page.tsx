@@ -66,7 +66,10 @@ export default function RegisterPage() {
     try {
       const response = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/register/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true"
+        },
         body: JSON.stringify({
           first_name: formData.firstName,
           last_name: formData.lastName,

@@ -190,6 +190,7 @@ export default function JobsPage() {
                             method: "POST",
                             headers: {
                               "Content-Type": "application/json",
+                              "ngrok-skip-browser-warning": "true",
                             },
                             body: JSON.stringify({ refresh_token: refreshToken }),
                           })

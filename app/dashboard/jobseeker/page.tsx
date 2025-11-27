@@ -121,6 +121,7 @@ export default function JobSeekerDashboard() {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
+            "ngrok-skip-browser-warning": "true",
           },
         })
         
@@ -131,7 +132,10 @@ export default function JobSeekerDashboard() {
           console.log("🔄 Token expired, attempting refresh...")
           const refreshResponse = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/refresh/", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              "ngrok-skip-browser-warning": "true"
+            },
             body: JSON.stringify({ refresh }),
           })
           
@@ -148,6 +152,7 @@ export default function JobSeekerDashboard() {
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
+                "ngrok-skip-browser-warning": "true",
               },
             })
             console.log("🔄 Retry response status:", response.status)
@@ -201,6 +206,7 @@ export default function JobSeekerDashboard() {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify(profileForm),
       })
@@ -247,7 +253,10 @@ export default function JobSeekerDashboard() {
         if (res.status === 401 && refresh) {
           const refreshResponse = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/refresh/", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              "ngrok-skip-browser-warning": "true"
+            },
             body: JSON.stringify({ refresh }),
           })
 
