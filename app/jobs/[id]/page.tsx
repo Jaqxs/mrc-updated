@@ -32,7 +32,7 @@ export default function JobDetails() {
     if (!token) return
 
     try {
-      const res = await fetch(`https://61be114a8e8f.ngrok-free.app/api/jobs/applications/`, {
+      const res = await fetch(`https://53b934d9cab8.ngrok-free.app/api/jobs/applications/`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "ngrok-skip-browser-warning": "true",

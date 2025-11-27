@@ -308,7 +308,7 @@ export default function HomePage() {
                         
                         // Call backend logout endpoint
                         if (refreshToken) {
-                          await fetch("https://61be114a8e8f.ngrok-free.app/api/accounts/logout/", {
+                          await fetch("https://53b934d9cab8.ngrok-free.app/api/accounts/logout/", {
                             method: "POST",
                             headers: {
                               "Content-Type": "application/json",
