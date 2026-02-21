@@ -91,7 +91,7 @@ export default function AboutPage() {
               <Phone className="h-3 w-3" /> +255 123 456 789
             </span>
             <span className="flex items-center gap-1 hover:underline">
-              <Mail className="h-3 w-3" /> info@mrc.go.tz
+              <Mail className="h-3 w-3" /> info@hrn.go.tz
             </span>
           </div>
 
@@ -116,7 +116,7 @@ export default function AboutPage() {
               <Globe className="h-6 w-6" />
             </span>
             <div>
-              <p className="font-bold leading-none">MRC PORTAL</p>
+              <p className="font-bold leading-none">HRN PORTAL</p>
               <p className="text-xs text-gray-500 -mt-1">Migrant Resource Centre</p>
             </div>
           </Link>

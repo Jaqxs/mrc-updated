@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { authService } from "@/lib/services/auth-service"
+import { ApiError } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -154,7 +156,7 @@ export default function HomePage() {
     const token = localStorage.getItem("accessToken")
     const role = localStorage.getItem("role")
     const firstName = localStorage.getItem("first_name")
-    
+
     if (token) {
       setIsLoggedIn(true)
       setUserRole(role)
@@ -211,7 +213,7 @@ export default function HomePage() {
                 <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center mr-2 group-hover:scale-110 transition-transform">
                   <Mail className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                 </div>
-                <span className="text-xs sm:text-sm">careers@mrc.go.tz</span>
+                <span className="text-xs sm:text-sm">careers@hrn.go.tz</span>
               </span>
             </div>
             <div className="flex items-center space-x-3 sm:space-x-6">
@@ -247,14 +249,14 @@ export default function HomePage() {
           <div className="flex items-center justify-between py-3 sm:py-4">
             <Link href="/" className="flex items-center space-x-2 sm:space-x-4 group">
               <div className="relative">
-                <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
-                  <Briefcase className="w-5 h-5 sm:w-8 sm:h-8 text-white group-hover:animate-pulse" />
+                <div className="w-10 h-10 sm:w-14 sm:h-14 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 overflow-hidden">
+                  <img src="/hrn-logo.png" alt="HRN Logo" className="w-full h-full object-contain" />
                 </div>
                 <div className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full animate-pulse"></div>
               </div>
               <div>
                 <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent group-hover:from-purple-600 group-hover:to-blue-600 transition-all duration-500">
-                  MRC CAREERS
+                  HRN RECRUITMENT AGENCY
                 </h1>
                 <p className="text-xs text-slate-500 uppercase tracking-wider font-medium hidden sm:block">
                   International Recruitment Agency
@@ -274,11 +276,10 @@ export default function HomePage() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`relative font-medium transition-all duration-300 hover:text-blue-600 ${
-                    item.active
-                      ? "text-blue-600 after:absolute after:bottom-[-8px] after:left-0 after:w-full after:h-0.5 after:bg-gradient-to-r after:from-blue-600 after:to-purple-600 after:rounded-full"
-                      : "text-slate-700 hover:after:absolute hover:after:bottom-[-8px] hover:after:left-0 hover:after:w-full hover:after:h-0.5 hover:after:bg-gradient-to-r hover:after:from-blue-600 hover:after:to-purple-600 hover:after:rounded-full"
-                  }`}
+                  className={`relative font-medium transition-all duration-300 hover:text-blue-600 ${item.active
+                    ? "text-blue-600 after:absolute after:bottom-[-8px] after:left-0 after:w-full after:h-0.5 after:bg-gradient-to-r after:from-blue-600 after:to-purple-600 after:rounded-full"
+                    : "text-slate-700 hover:after:absolute hover:after:bottom-[-8px] hover:after:left-0 hover:after:w-full hover:after:h-0.5 hover:after:bg-gradient-to-r hover:after:from-blue-600 hover:after:to-purple-600 hover:after:rounded-full"
+                    }`}
                 >
                   {item.name}
                 </Link>
@@ -305,28 +306,13 @@ export default function HomePage() {
                     onClick={async () => {
                       try {
                         const refreshToken = localStorage.getItem("refreshToken")
-                        
-                        // Call backend logout endpoint
                         if (refreshToken) {
-                          await fetch("https://53b934d9cab8.ngrok-free.app/api/accounts/logout/", {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                              "ngrok-skip-browser-warning": "true",
-                              "ngrok-skip-browser-warning": "true",
-                            },
-                            body: JSON.stringify({ refresh_token: refreshToken }),
-                          })
+                          await authService.logout(refreshToken)
                         }
                       } catch (error) {
                         console.error("Logout error:", error)
                       } finally {
-                        // Clear frontend storage
-                        localStorage.removeItem("accessToken")
-                        localStorage.removeItem("refreshToken")
-                        localStorage.removeItem("role")
-                        localStorage.removeItem("email")
-                        localStorage.removeItem("first_name")
+                        localStorage.clear()
                         window.location.reload()
                       }
                     }}
@@ -388,9 +374,8 @@ export default function HomePage() {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
-                      item.active ? "text-blue-600 bg-blue-50" : "text-slate-700 hover:text-blue-600 hover:bg-blue-50"
-                    }`}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${item.active ? "text-blue-600 bg-blue-50" : "text-slate-700 hover:text-blue-600 hover:bg-blue-50"
+                      }`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     {item.name}
@@ -403,6 +388,11 @@ export default function HomePage() {
       </header>
 
       <section className="relative overflow-hidden">
+        {/* Interactive background blobs */}
+        <div className="absolute top-20 -left-20 w-[600px] h-[600px] bg-blue-400/20 rounded-full mix-blend-multiply filter blur-[120px] animate-blob"></div>
+        <div className="absolute top-40 -right-20 w-[600px] h-[600px] bg-purple-400/20 rounded-full mix-blend-multiply filter blur-[120px] animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-40 left-1/4 w-[600px] h-[600px] bg-pink-400/20 rounded-full mix-blend-multiply filter blur-[120px] animate-blob animation-delay-4000"></div>
+
         <div className={`${heroSlides[currentSlide].image} transition-all duration-1000 ease-in-out`}>
           <div className="absolute inset-0 bg-black/20"></div>
           <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/40"></div>
@@ -469,26 +459,27 @@ export default function HomePage() {
               </div>
 
               <div
-                className={`transform transition-all duration-1000 delay-300 ${isVisible ? "translate-x-0 opacity-100" : "translate-x-10 opacity-0"}`}
+                className={`transform transition-all duration-1000 delay-300 relative z-10 ${isVisible ? "translate-x-0 opacity-100" : "translate-x-10 opacity-0"}`}
               >
-                <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-0 rounded-2xl sm:rounded-3xl overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 sm:p-8">
-                    <CardTitle className="text-lg sm:text-2xl font-bold text-center flex items-center justify-center">
-                      <Target className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                <Card className="glass border-white/20 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-2xl">
+                  <CardHeader className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-6 sm:p-10">
+                    <CardTitle className="text-xl sm:text-3xl font-extrabold text-center flex items-center justify-center tracking-tight">
+                      <Target className="w-6 h-6 sm:w-8 sm:h-8 mr-3" />
                       Job Search Portal
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-4 sm:p-8">
+                  <CardContent className="p-6 sm:p-10">
                     <div className="mb-6 sm:mb-8">
                       <div className="relative group">
                         <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5 group-hover:text-blue-500 transition-colors" />
                         <Input
                           placeholder="Search jobs..."
-                          className="pl-10 sm:pl-12 h-12 sm:h-14 text-base sm:text-lg border-2 border-slate-200 rounded-xl sm:rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 hover:border-blue-300"
+                          className="pl-12 h-14 sm:h-16 text-base sm:text-lg border-2 border-white/20 bg-white/50 backdrop-blur-sm rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300"
                         />
                         <Button
                           size="sm"
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-purple-500 hover:to-blue-500 rounded-lg sm:rounded-xl text-xs sm:text-sm px-3 sm:px-4"
+                          variant="gradient"
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-xl text-xs sm:text-sm px-4 sm:px-6 h-10 sm:h-12 font-bold"
                         >
                           <span className="hidden sm:inline">Search Jobs</span>
                           <span className="sm:hidden">Search</span>
@@ -519,18 +510,18 @@ export default function HomePage() {
                       {isLoggedIn ? (
                         <>
                           <Button
-                            className="w-full h-12 sm:h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-purple-600 hover:to-blue-600 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                            variant="gradient"
+                            className="w-full h-14 sm:h-16 text-lg sm:text-xl font-bold rounded-2xl shadow-xl hover:scale-[1.02] transition-transform"
                             asChild
                           >
                             <Link href={userRole === 'admin' || userRole === 'staff' ? '/dashboard/admin' : '/dashboard/jobseeker'}>
-                              <Users className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
-                              <span className="hidden sm:inline">Go to Dashboard</span>
-                              <span className="sm:hidden">Dashboard</span>
+                              <Users className="mr-3 w-5 h-5 sm:w-6 sm:h-6" />
+                              <span>Go to Dashboard</span>
                             </Link>
                           </Button>
                           <Button
                             variant="outline"
-                            className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl border-2 border-slate-200 hover:border-red-300 hover:bg-red-50 transition-all duration-300 hover:scale-105 bg-transparent"
+                            className="w-full h-14 sm:h-16 text-lg font-bold rounded-2xl border-2 hover:bg-slate-50 transition-all hover:scale-[1.02]"
                             onClick={() => {
                               localStorage.removeItem("accessToken")
                               localStorage.removeItem("refreshToken")
@@ -540,32 +531,30 @@ export default function HomePage() {
                               window.location.reload()
                             }}
                           >
-                            <Shield className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
-                            <span className="hidden sm:inline">Sign Out</span>
-                            <span className="sm:hidden">Sign Out</span>
+                            <Shield className="mr-3 w-5 h-5" />
+                            <span>Sign Out</span>
                           </Button>
                         </>
                       ) : (
                         <>
                           <Button
-                            className="w-full h-12 sm:h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-purple-600 hover:to-blue-600 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                            variant="gradient"
+                            className="w-full h-14 sm:h-16 text-lg sm:text-xl font-bold rounded-2xl shadow-xl shadow-blue-500/20 hover:scale-[1.02] transition-transform"
                             asChild
                           >
                             <Link href="/register">
-                              <Users className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
-                              <span className="hidden sm:inline">Create Job Seeker Profile</span>
-                              <span className="sm:hidden">Create Profile</span>
+                              <Users className="mr-3 w-5 h-5 sm:w-6 sm:h-6" />
+                              <span>Create Job Seeker Profile</span>
                             </Link>
                           </Button>
                           <Button
-                            variant="outline"
-                            className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-300 hover:scale-105 bg-transparent"
+                            variant="premium"
+                            className="w-full h-14 sm:h-16 text-lg sm:text-xl font-bold rounded-2xl shadow-xl shadow-slate-900/20 hover:scale-[1.02] transition-transform"
                             asChild
                           >
                             <Link href="/login">
-                              <Shield className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
-                              <span className="hidden sm:inline">Employer / Admin Login</span>
-                              <span className="sm:hidden">Admin Login</span>
+                              <Shield className="mr-3 w-5 h-5 sm:w-6 sm:h-6" />
+                              <span>Employer / Admin Login</span>
                             </Link>
                           </Button>
                         </>
@@ -614,11 +603,10 @@ export default function HomePage() {
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
-                className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
-                  index === currentSlide
-                    ? "bg-white scale-125 shadow-lg"
-                    : "bg-white/50 hover:bg-white/75 hover:scale-110"
-                }`}
+                className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${index === currentSlide
+                  ? "bg-white scale-125 shadow-lg"
+                  : "bg-white/50 hover:bg-white/75 hover:scale-110"
+                  }`}
               />
             ))}
           </div>
@@ -942,7 +930,7 @@ export default function HomePage() {
                     <div className="flex items-start p-3 bg-white rounded-xl shadow-sm">
                       <Mail className="w-4 h-4 mr-3 mt-0.5 text-green-500" />
                       <div>
-                        <div className="font-semibold">careers@mrc.go.tz</div>
+                        <div className="font-semibold">careers@hrn.go.tz</div>
                         <div className="text-slate-600">Career Inquiries</div>
                       </div>
                     </div>
@@ -971,7 +959,7 @@ export default function HomePage() {
                   <Briefcase className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
                 </div>
                 <div>
-                  <div className="font-bold text-lg sm:text-xl">MRC CAREERS</div>
+                  <div className="font-bold text-lg sm:text-xl">HRN RECRUITMENT AGENCY</div>
                   <div className="text-xs text-blue-200">International Recruitment Agency</div>
                 </div>
               </div>
@@ -1033,8 +1021,8 @@ export default function HomePage() {
                 </li>
                 <li className="flex items-center">
                   <Mail className="w-3 h-3 sm:w-4 sm:h-4 mr-2 sm:mr-3 flex-shrink-0" />
-                  <Link href="mailto:careers@mrc.go.tz" className="hover:text-white transition-colors">
-                    careers@mrc.go.tz
+                  <Link href="mailto:careers@hrn.go.tz" className="hover:text-white transition-colors">
+                    careers@hrn.go.tz
                   </Link>
                 </li>
                 <li className="flex items-center">

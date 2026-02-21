@@ -222,7 +222,7 @@ export default function ResourcesPage() {
                 <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-2 group-hover:scale-110 transition-transform">
                   <Mail className="w-3 h-3 text-white" />
                 </div>
-                info@mrc.go.tz
+                info@hrn.go.tz
               </span>
             </div>
             <div className="flex items-center space-x-6">
@@ -260,7 +260,7 @@ export default function ResourcesPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent group-hover:from-purple-600 group-hover:to-blue-600 transition-all duration-500">
-                  MRC PORTAL
+                  HRN PORTAL
                 </h1>
                 <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">Migrant Resource Centre</p>
               </div>
@@ -724,7 +724,7 @@ export default function ResourcesPage() {
                   <Globe className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div className="font-bold text-lg">MRC PORTAL</div>
+                  <div className="font-bold text-lg">HRN PORTAL</div>
                   <div className="text-xs text-gray-400">Migrant Resource Centre</div>
                 </div>
               </div>
@@ -799,7 +799,7 @@ export default function ResourcesPage() {
                 </li>
                 <li className="flex items-center">
                   <Mail className="w-4 h-4 mr-2" />
-                  info@mrc.go.tz
+                  info@hrn.go.tz
                 </li>
                 <li className="flex items-center">
                   <MapPin className="w-4 h-4 mr-2" />

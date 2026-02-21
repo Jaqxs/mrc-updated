@@ -21,6 +21,8 @@ import {
   CheckCircle,
 } from "lucide-react"
 import Link from "next/link"
+import { authService } from "@/lib/services/auth-service"
+import { ApiError } from "@/lib/api-client"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -34,21 +36,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const response = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/login/", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true"
-        },
-        body: JSON.stringify({ email, password, user_type: userType }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        alert(`❌ Login failed: ${data.detail || "Invalid credentials"}`)
-        return
-      }
+      const data = await authService.login({ email, password, user_type: userType })
 
       localStorage.setItem("accessToken", data.access)
       localStorage.setItem("refreshToken", data.refresh)
@@ -56,31 +44,37 @@ export default function LoginPage() {
       localStorage.setItem("email", data.email)
       localStorage.setItem("first_name", data.first_name)
 
-      // Check if there's a specific job ID in the URL to redirect back to
       const urlParams = new URLSearchParams(window.location.search)
       const jobId = urlParams.get('job_id')
-      
+
       if (jobId) {
-        // Redirect back to the specific job they wanted to apply for
         window.location.href = `/jobs/${jobId}`
       } else {
-        // Default redirect based on user type
         if (data.role === 'admin' || data.role === 'staff') {
           window.location.href = "/dashboard/admin"
         } else {
           window.location.href = "/dashboard/jobseeker"
         }
       }
-    } catch (error) {
-      console.error("Login error:", error)
-      alert("⚠️ Something went wrong. Please try again later.")
+    } catch (err: any) {
+      console.error("Login error:", err)
+      if (err instanceof ApiError) {
+        alert(`❌ Login failed: ${err.data?.detail || err.message}`)
+      } else {
+        alert("⚠️ Something went wrong. Please try again later.")
+      }
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 relative overflow-hidden">
+      {/* Decorative blobs */}
+      <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+      <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-md shadow-xl border-b border-blue-100">
         <div className="container mx-auto px-4">
@@ -91,7 +85,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  MRC CAREERS
+                  HRN RECRUITMENT AGENCY
                 </h1>
                 <p className="text-xs text-slate-500 uppercase tracking-wide">
                   International Recruitment Agency
@@ -106,14 +100,14 @@ export default function LoginPage() {
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-3 gap-8">
           {/* Left: Login Form */}
-          <div className="lg:col-span-2">
-            <Card className="shadow-2xl border-0 rounded-3xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-8">
-                <CardTitle className="text-3xl flex items-center">
-                  <Lock className="w-8 h-8 mr-3" />
-                  Sign In to MRC Careers
+          <div className="lg:col-span-2 relative z-10">
+            <Card className="glass border-white/20 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-xl">
+              <CardHeader className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-10">
+                <CardTitle className="text-4xl font-extrabold flex items-center tracking-tight">
+                  <Lock className="w-10 h-10 mr-4" />
+                  Sign In to HRN Recruitment Agency
                 </CardTitle>
-                <CardDescription className="text-blue-100 text-lg">
+                <CardDescription className="text-blue-50 text-xl font-medium mt-2">
                   Access your account to manage job applications and track your career journey
                 </CardDescription>
               </CardHeader>
@@ -179,7 +173,8 @@ export default function LoginPage() {
                       <Button
                         type="submit"
                         disabled={loading}
-                        className="w-full h-14 bg-gradient-to-r from-blue-600 to-purple-600 text-lg font-semibold rounded-2xl"
+                        variant="gradient"
+                        className="w-full h-14 text-lg font-bold rounded-2xl"
                       >
                         {loading ? "Signing In..." : "Sign In to Dashboard"}
                       </Button>
@@ -204,7 +199,7 @@ export default function LoginPage() {
                         <Input
                           id="admin-email"
                           type="email"
-                          placeholder="admin@mrc.go.tz"
+                          placeholder="admin@hrn.go.tz"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="h-14 text-lg rounded-2xl"
@@ -235,7 +230,8 @@ export default function LoginPage() {
                       <Button
                         type="submit"
                         disabled={loading}
-                        className="w-full h-14 bg-gradient-to-r from-purple-600 to-pink-600 text-lg font-semibold rounded-2xl"
+                        variant="premium"
+                        className="w-full h-14 text-lg font-bold rounded-2xl shadow-xl"
                       >
                         {loading ? "Signing In..." : "Sign In as Admin"}
                       </Button>
@@ -336,7 +332,7 @@ export default function LoginPage() {
       {/* Footer */}
       <footer className="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white py-8 mt-16">
         <div className="text-center text-sm text-blue-200">
-          © 2024 MRC Careers. All Rights Reserved.
+          © 2024 HRN Recruitment Agency. All Rights Reserved.
         </div>
       </footer>
     </div>

@@ -352,7 +352,7 @@ export default function ServicesPage() {
                 <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center mr-2 group-hover:scale-110 transition-transform">
                   <Mail className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                 </div>
-                <span className="text-xs sm:text-sm">careers@mrc.go.tz</span>
+                <span className="text-xs sm:text-sm">careers@hrn.go.tz</span>
               </span>
             </div>
             <div className="flex items-center space-x-3 sm:space-x-6">
@@ -395,7 +395,7 @@ export default function ServicesPage() {
               </div>
               <div>
                 <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent group-hover:from-purple-600 group-hover:to-blue-600 transition-all duration-500">
-                  MRC CAREERS
+                  HRN RECRUITMENT AGENCY
                 </h1>
                 <p className="text-xs text-slate-500 uppercase tracking-wider font-medium hidden sm:block">
                   Job Recruitment Agency
@@ -811,7 +811,7 @@ export default function ServicesPage() {
                   <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div>
-                  <div className="font-bold text-base sm:text-lg">MRC CAREERS</div>
+                  <div className="font-bold text-base sm:text-lg">HRN RECRUITMENT AGENCY</div>
                   <div className="text-xs text-gray-400">Job Recruitment Agency</div>
                 </div>
               </div>
@@ -868,7 +868,7 @@ export default function ServicesPage() {
                 </li>
                 <li className="flex items-center">
                   <Mail className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
-                  <span>careers@mrc.go.tz</span>
+                  <span>careers@hrn.go.tz</span>
                 </li>
                 <li className="flex items-center">
                   <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />

@@ -7,9 +7,9 @@ export default function EmployerPartnershipPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">MRC</span>
+                <span className="text-white font-bold text-sm">HRN</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">MRC Careers</span>
+              <span className="text-xl font-bold text-gray-900">HRN Recruitment Agency</span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a href="/" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">
@@ -61,7 +61,7 @@ export default function EmployerPartnershipPage() {
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Employer Partnership Program</h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Partner with MRC Careers to access top international talent. We connect you with pre-screened, qualified
+            Partner with HRN Recruitment Agency to access top international talent. We connect you with pre-screened, qualified
             candidates ready to contribute to your organization's success.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -253,7 +253,7 @@ export default function EmployerPartnershipPage() {
                 </div>
               </div>
               <p className="text-gray-600 italic">
-                "MRC Careers helped us hire 15 skilled developers from various countries. The quality of candidates and
+                "HRN Recruitment Agency helped us hire 15 skilled developers from various countries. The quality of candidates and
                 support throughout the process was exceptional."
               </p>
             </div>
@@ -281,7 +281,7 @@ export default function EmployerPartnershipPage() {
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-white mb-6">Ready to Access Global Talent?</h2>
           <p className="text-xl text-amber-100 mb-8">
-            Join hundreds of companies that trust MRC Careers for their international recruitment needs.
+            Join hundreds of companies that trust HRN Recruitment Agency for their international recruitment needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button className="bg-white text-amber-600 px-8 py-3 rounded-lg hover:bg-gray-100 transition-all duration-200 font-semibold">

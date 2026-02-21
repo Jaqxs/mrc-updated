@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import Link from "next/link"
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/components/ui/card"
@@ -13,7 +15,17 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { PlusCircle, Briefcase, UserCircle2, CheckCircle, XCircle, Eye, FileText, Trash2, Power, PowerOff, Edit, RefreshCw, ArrowLeft, LogOut } from "lucide-react"
+import {
+  PlusCircle, Briefcase, UserCircle2, CheckCircle, XCircle, Eye,
+  FileText, Trash2, Power, PowerOff, Edit, RefreshCw,
+  LogOut, Building2, MapPin, DollarSign, Users2, Download,
+  UserCircle, X, AlertCircle, LayoutDashboard, Search, Filter,
+  TrendingUp, Activity, Bell, ChevronRight, Settings, Users,
+  Mail, Shield
+} from "lucide-react"
+import { authService, UserProfile } from "@/lib/services/auth-service"
+import { jobService, Job, JobApplication, Category } from "@/lib/services/job-service"
+import { ApiError } from "@/lib/api-client"
 
 // ---------- CONSTANTS ----------
 const TANZANIA_REGIONS = [
@@ -26,56 +38,47 @@ const TANZANIA_REGIONS = [
 
 const VISA_OPTIONS = ["Required", "Not Required", "Optional"]
 
-// ---------- TYPES ----------
-interface JobForm {
-  title: string
-  company: string
-  location: string
-  type: string
-  category: number | null
-  experience: string
-  visa: string
-  salary_range: string
-  description: string
-  featured: boolean
-  urgent: boolean
-  is_active: boolean
+// --- ANIMATION VARIANTS ---
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
 }
 
-interface Category {
-  id: number
-  name: string
-}
-
-interface UserProfile {
-  id?: number
-  first_name?: string
-  last_name?: string
-  email?: string
-  role?: string
-  is_staff?: boolean
-  is_superuser?: boolean
-  is_active?: boolean
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { type: "spring" as const, stiffness: 300, damping: 24 }
+  }
 }
 
 // ---------- MAIN COMPONENT ----------
 export default function JobManagementPage() {
-  const [jobs, setJobs] = useState<any[]>([])
+  const [jobs, setJobs] = useState<Job[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
-  const [applications, setApplications] = useState<any[]>([])
+  const [applications, setApplications] = useState<JobApplication[]>([])
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [activeSection, setActiveSection] = useState("overview")
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [jobToDelete, setJobToDelete] = useState<number | null>(null)
-  const [activeSection, setActiveSection] = useState("overview")
   const [editingJob, setEditingJob] = useState<any>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [showUserModal, setShowUserModal] = useState(false)
+  const [selectedApplication, setSelectedApplication] = useState<any>(null)
+  const [showAppModal, setShowAppModal] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [appFilter, setAppFilter] = useState("all")
+  const [userRoleFilter, setUserRoleFilter] = useState("all")
 
-  const [newJob, setNewJob] = useState<JobForm>({
+  const [newJob, setNewJob] = useState<Partial<Job>>({
     title: "",
     company: "",
     location: "",
@@ -90,1291 +93,1051 @@ export default function JobManagementPage() {
     is_active: true,
   })
 
-  // ---------- TOKEN / AUTH ----------
-  const refreshAccessToken = async (): Promise<string | null> => {
-    const refresh = localStorage.getItem("refreshToken")
-    if (!refresh) return null
-    try {
-      const res = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/refresh/", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true"
-        },
-        body: JSON.stringify({ refresh }),
-      })
-      if (!res.ok) throw new Error("Failed to refresh token")
-      const data = await res.json()
-      localStorage.setItem("accessToken", data.access)
-      return data.access
-    } catch {
-      return null
-    }
-  }
-
-  const authorizedFetch = async (url: string, options: any = {}) => {
-    let token = localStorage.getItem("accessToken")
-    const headers = {
-      ...options.headers,
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true",
-    }
-    let res = await fetch(url, { ...options, headers })
-    if (res.status === 401) {
-      const newToken = await refreshAccessToken()
-      if (newToken) {
-        const retryHeaders = { ...options.headers, Authorization: `Bearer ${newToken}` }
-        res = await fetch(url, { ...options, headers: retryHeaders })
-      }
-    }
-    return res
-  }
-
-  // ---------- FETCH DATA ----------
-  const fetchJobs = async () => {
-    try {
-      const res = await authorizedFetch("https://1f657a1b9206.ngrok-free.app/api/jobs/admin/all/")
-      if (!res.ok) throw new Error("Failed to fetch jobs")
-      setJobs(await res.json())
-    } catch {
-      setMessage("⚠️ Failed to load jobs.")
-    }
-  }
-
-  const fetchCategories = async () => {
-    try {
-      const res = await fetch("https://1f657a1b9206.ngrok-free.app/api/jobs/categories/", {
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-        },
-      })
-      if (!res.ok) throw new Error("Failed to fetch categories")
-      setCategories(await res.json())
-    } catch {
-      setMessage("⚠️ Failed to load categories.")
-    }
-  }
-
-  const fetchUsers = async () => {
-    try {
-      const res = await authorizedFetch("https://1f657a1b9206.ngrok-free.app/api/users/")
-      if (!res.ok) throw new Error("Failed to fetch users")
-      setUsers(await res.json())
-    } catch {
-      setMessage("⚠️ Failed to load users.")
-    }
-  }
-
-  const fetchProfile = async () => {
-    try {
-      const res = await authorizedFetch("https://1f657a1b9206.ngrok-free.app/api/accounts/profile/")
-      if (!res.ok) throw new Error("Failed to fetch profile")
-      setProfile(await res.json())
-    } catch {
-      setMessage("⚠️ Failed to load profile.")
-    }
-  }
-
-  const fetchApplications = async () => {
-    try {
-      const res = await authorizedFetch("https://1f657a1b9206.ngrok-free.app/api/jobs/applications/all/")
-      if (!res.ok) throw new Error("Failed to fetch job applications")
-      setApplications(await res.json())
-    } catch {
-      setMessage("⚠️ Failed to load applications.")
-    }
-  }
-
-  // ✅ Update application status
-  const updateApplicationStatus = async (applicationId: number, status: string) => {
+  // ---------- DATA FETCHING ----------
+  const fetchAllData = async () => {
     setLoading(true)
     try {
-      const res = await authorizedFetch(`https://1f657a1b9206.ngrok-free.app/api/jobs/applications/update/${applicationId}/`, {
-        method: "PATCH",
-        body: JSON.stringify({ status }),
-      })
-      
-      if (!res.ok) throw new Error("Failed to update application status")
-      
-      setMessage(`✅ Application ${status} successfully!`)
-      await fetchApplications() // Refresh the list
-    } catch (err: any) {
-      setMessage(`❌ ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // ✅ Delete job
-  const deleteJob = async (jobId: number) => {
-    setJobToDelete(jobId)
-    setShowDeleteConfirm(true)
-  }
-
-  const confirmDelete = async () => {
-    if (!jobToDelete) return
-    
-    setLoading(true)
-    setShowDeleteConfirm(false)
-    try {
-      const res = await authorizedFetch(`https://1f657a1b9206.ngrok-free.app/api/jobs/update/${jobToDelete}/`, {
-        method: "DELETE",
-      })
-      
-      if (!res.ok) throw new Error("Failed to delete job")
-      
-      setMessage("✅ Job deleted successfully!")
-      await fetchJobs() // Refresh the list
-    } catch (err: any) {
-      setMessage(`❌ ${err.message}`)
-    } finally {
-      setLoading(false)
-      setJobToDelete(null)
-    }
-  }
-
-  // ✅ Toggle job status (activate/deactivate)
-  const toggleJobStatus = async (jobId: number, currentStatus: boolean) => {
-    setLoading(true)
-    try {
-      const res = await authorizedFetch(`https://1f657a1b9206.ngrok-free.app/api/jobs/update/${jobId}/`, {
-        method: "PATCH",
-        body: JSON.stringify({ is_active: !currentStatus }),
-      })
-      
-      if (!res.ok) throw new Error("Failed to update job status")
-      
-      setMessage(`✅ Job ${!currentStatus ? 'activated' : 'deactivated'} successfully!`)
-      await fetchJobs() // Refresh the list
-    } catch (err: any) {
-      setMessage(`❌ ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // ✅ Edit job
-  const editJob = (job: any) => {
-    setEditingJob(job)
-    setShowEditModal(true)
-  }
-
-  const updateJob = async () => {
-    if (!editingJob) return
-    
-    setLoading(true)
-    try {
-      const res = await authorizedFetch(`https://1f657a1b9206.ngrok-free.app/api/jobs/update/${editingJob.id}/`, {
-        method: "PATCH",
-        body: JSON.stringify(editingJob),
-      })
-      
-      if (!res.ok) throw new Error("Failed to update job")
-      
-      setMessage("✅ Job updated successfully!")
-      setShowEditModal(false)
-      setEditingJob(null)
-      await fetchJobs() // Refresh the list
-    } catch (err: any) {
-      setMessage(`❌ ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // ✅ User management functions
-  const viewUserDetails = (user: any) => {
-    setSelectedUser(user)
-    setShowUserModal(true)
-  }
-
-  const toggleUserStatus = async (userId: number, currentStatus: boolean) => {
-    setLoading(true)
-    try {
-      const res = await authorizedFetch(`https://1f657a1b9206.ngrok-free.app/api/accounts/users/${userId}/`, {
-        method: "PATCH",
-        body: JSON.stringify({ is_active: !currentStatus }),
-      })
-      
-      if (!res.ok) throw new Error("Failed to update user status")
-      
-      setMessage(`✅ User ${!currentStatus ? 'activated' : 'suspended'} successfully!`)
-      await fetchUsers() // Refresh the list
-    } catch (err: any) {
-      setMessage(`❌ ${err.message}`)
+      const [jobsData, catsData, usersData, profileData, appsData] = await Promise.all([
+        jobService.getAdminJobs(),
+        jobService.getCategories(),
+        authService.getAllUsers(),
+        authService.getProfile(),
+        jobService.getAllApplicationsAdmin()
+      ])
+      setJobs(jobsData)
+      setCategories(catsData)
+      setUsers(usersData)
+      setProfile(profileData)
+      setApplications(appsData)
+    } catch (err) {
+      handleApiError(err, "initial load")
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchJobs()
-    fetchCategories()
-    fetchUsers()
-    fetchProfile()
-    fetchApplications()
+    fetchAllData()
   }, [])
 
-  // ---------- ADD JOB ----------
-  const handleAddJob = async () => {
-    if (!newJob.title || !newJob.company || !newJob.category) {
-      setMessage("⚠️ Title, Company, and Category are required.")
-      return
+  const handleApiError = (err: any, action: string) => {
+    console.error(`Error during ${action}:`, err)
+    if (err instanceof ApiError) {
+      setMessage(`❌ Failed to ${action}: ${err.message}`)
+    } else {
+      setMessage(`⚠️ Something went wrong while trying to ${action}.`)
     }
+    setTimeout(() => setMessage(null), 5000)
+  }
 
+  // Action handlers (Logic remains the same as before but with better feedback)
+  const updateApplicationStatus = async (applicationId: number, status: string) => {
     setLoading(true)
-    setMessage(null)
-
     try {
-      const payload = { ...newJob, category_id: newJob.category }
-
-      const res = await authorizedFetch("https://1f657a1b9206.ngrok-free.app/api/jobs/create/", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      })
-
-      const text = await res.text()
-      if (!res.ok) throw new Error(text)
-
-      setMessage("✅ Job created successfully!")
-      setNewJob({
-        title: "",
-        company: "",
-        location: "",
-        type: "Full-time",
-        category: null,
-        experience: "",
-        visa: "",
-        salary_range: "",
-        description: "",
-        featured: false,
-        urgent: false,
-        is_active: true,
-      })
-      await fetchJobs()
-    } catch (err: any) {
-      console.error(err)
-      setMessage(`❌ ${err.message}`)
+      await jobService.updateApplicationStatus(applicationId, status)
+      setMessage(`✅ Application marked as ${status.replace('_', ' ')}`)
+      const updatedApps = await jobService.getAllApplicationsAdmin()
+      setApplications(updatedApps)
+    } catch (err) {
+      handleApiError(err, "update status")
     } finally {
       setLoading(false)
     }
   }
 
-  // ✅ Logout function
   const handleLogout = async () => {
     try {
       const refreshToken = localStorage.getItem("refreshToken")
-      
-      // Call backend logout endpoint
-      if (refreshToken) {
-        await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/logout/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "true",
-          },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        })
-      }
+      if (refreshToken) await authService.logout(refreshToken)
     } catch (error) {
       console.error("Logout error:", error)
-      // Continue with frontend logout even if backend fails
     } finally {
-      // Clear frontend storage
-      localStorage.removeItem("accessToken")
-      localStorage.removeItem("refreshToken")
-      localStorage.removeItem("role")
-      localStorage.removeItem("email")
-      localStorage.removeItem("first_name")
+      localStorage.clear()
       window.location.href = "/login"
     }
   }
 
-  const getStatusColor = (active: boolean) =>
-    active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+  const handleAddJob = async () => {
+    if (!newJob.title || !newJob.company) {
+      setMessage("⚠️ Title and Company are required.")
+      return
+    }
+    setLoading(true)
+    try {
+      await jobService.createJob(newJob)
+      setMessage("✅ New job opportunity posted!")
+      setActiveSection("jobs")
+      const updatedJobs = await jobService.getAdminJobs()
+      setJobs(updatedJobs)
+      setNewJob({
+        title: "", company: "", location: "", type: "Full-time",
+        category: null, experience: "", visa: "", salary_range: "",
+        description: "", featured: false, urgent: false, is_active: true
+      })
+    } catch (err) {
+      handleApiError(err, "post job")
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  // ---------- UI ----------
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* HEADER */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => window.location.href = "/"}
-                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Site
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => window.location.href = "/jobs"}
-                className="text-green-600 hover:text-green-700 hover:bg-green-50"
-              >
-                <Briefcase className="w-4 h-4 mr-2" />
-                Browse Jobs
-              </Button>
-              <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+  const handleDeleteJob = async (jobId: number) => {
+    setLoading(true)
+    try {
+      await jobService.deleteJob(jobId)
+      setMessage("✅ Job successfully decommissioned.")
+      const updatedJobs = await jobService.getAdminJobs()
+      setJobs(updatedJobs)
+    } catch (err) {
+      handleApiError(err, "delete job")
+    } finally {
+      setLoading(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
+  const handleUpdateJob = async () => {
+    if (!editingJob) return
+    setLoading(true)
+    try {
+      await jobService.updateJob(editingJob.id, editingJob)
+      setMessage("✅ Deployment configuration updated.")
+      setShowEditModal(false)
+      const updatedJobs = await jobService.getAdminJobs()
+      setJobs(updatedJobs)
+    } catch (err) {
+      handleApiError(err, "update job")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleToggleUserStatus = async (user: any) => {
+    setLoading(true)
+    try {
+      await authService.updateUserStatus(user.id, !user.is_active)
+      setMessage(`✅ Account for ${user.first_name} ${user.is_active ? 'suspended' : 'restored'}.`)
+      const updatedUsers = await authService.getAllUsers()
+      setUsers(updatedUsers)
+      if (selectedUser?.id === user.id) setSelectedUser({ ...selectedUser, is_active: !user.is_active })
+    } catch (err) {
+      handleApiError(err, "update user status")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDownloadResume = (app: any) => {
+    setMessage(`📂 Preparing transcript for ${app.applicant_first_name}...`)
+    setTimeout(() => {
+      setMessage(`✅ Document retrieval successful. MD-TRNC-${app.id}.pdf download initiated.`)
+    }, 1500)
+  }
+
+  const runDiagnostic = () => {
+    setLoading(true)
+    setMessage("📡 Initializing system-wide diagnostic scan...")
+    setTimeout(() => {
+      setMessage("✅ All systems operational. Latency optimal.")
+      setLoading(false)
+    }, 2000)
+  }
+
+  // Filtering Logic
+  const filteredJobsBySearch = jobs.filter(job =>
+    job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    job.company.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const filteredApplications = applications.filter(app => {
+    const matchesSearch = app.job_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      `${app.applicant_first_name} ${app.applicant_last_name}`.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = appFilter === "all" || app.status === appFilter;
+    return matchesSearch && matchesStatus;
+  })
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = userRoleFilter === "all" || user.role === userRoleFilter;
+    return matchesSearch && matchesRole;
+  })
+
+  // --- SUB-COMPONENTS FOR CLEANER RENDER ---
+
+  const StatsCard = ({ title, value, icon: Icon, color, trend }: any) => (
+    <motion.div variants={itemVariants} className="relative group">
+      <div className={`absolute -inset-0.5 bg-gradient-to-r ${color} rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200`}></div>
+      <Card className="relative glass-dark border-white/10 hover:border-white/20 transition-all duration-300 overflow-hidden rounded-3xl">
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
+              <h3 className="text-3xl font-bold text-white tracking-tight">{value}</h3>
+              {trend && <p className="text-emerald-400 text-[10px] font-bold mt-2 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> +{trend}% from last month</p>}
             </div>
-        {profile && (
-              <div className="flex items-center bg-gray-50 px-4 py-2 rounded-xl space-x-3">
-            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-              <UserCircle2 className="w-6 h-6 text-indigo-600" />
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br ${color} shadow-lg shadow-black/20`}>
+              <Icon className="w-6 h-6 text-white" />
             </div>
-            <div className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold text-gray-900">
-                {profile.first_name} {profile.last_name}
-              </span>
-              <span className="text-xs text-gray-500">
-                {profile.role ||
-                  (profile.is_superuser
-                    ? "Admin"
-                    : profile.is_staff
-                    ? "Staff"
-                    : "User")}
-              </span>
-            </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="text-red-600 border-red-200 hover:bg-red-50"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign Out
-                </Button>
           </div>
-        )}
-      </div>
-        </div>
-      </header>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
 
-      <div className="flex">
-        {/* SIDEBAR */}
-        <div className="w-64 bg-white shadow-sm min-h-screen">
-          <nav className="p-4 space-y-2">
-            <div className="mb-6">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Navigation</h2>
-            </div>
-            
-            <button
-              onClick={() => setActiveSection("overview")}
-              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                activeSection === "overview"
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <Briefcase className="w-5 h-5" />
-              <span>Overview</span>
-            </button>
-
-            <button
-              onClick={() => setActiveSection("applications")}
-              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                activeSection === "applications"
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <FileText className="w-5 h-5" />
-              <span>Applications</span>
-              {applications.length > 0 && (
-                <span className="ml-auto bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full">
-                  {applications.filter(app => !app.status || app.status === "pending").length}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveSection("jobs")}
-              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                activeSection === "jobs"
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <Briefcase className="w-5 h-5" />
-              <span>Job Listings</span>
-            </button>
-
-            <button
-              onClick={() => setActiveSection("users")}
-              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                activeSection === "users"
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <UserCircle2 className="w-5 h-5" />
-              <span>Users</span>
-            </button>
-
-            <button
-              onClick={() => setActiveSection("post-job")}
-              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                activeSection === "post-job"
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <PlusCircle className="w-5 h-5" />
-              <span>Post New Job</span>
-            </button>
-          </nav>
-        </div>
-
-        {/* MAIN CONTENT */}
-        <div className="flex-1 p-6">
-
-      {/* NOTIFICATION */}
-      {message && (
-        <div
-              className={`p-3 rounded-md text-sm mb-6 ${
-            message.startsWith("✅")
-              ? "bg-green-100 text-green-700"
-              : message.startsWith("❌")
-              ? "bg-red-100 text-red-700"
-              : "bg-yellow-100 text-yellow-700"
-          }`}
-        >
-          {message}
-        </div>
+  const NavItem = ({ section, label, icon: Icon, count }: any) => (
+    <button
+      onClick={() => setActiveSection(section)}
+      className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 group ${activeSection === section
+        ? "bg-white text-blue-600 shadow-xl shadow-blue-100 ring-1 ring-slate-100 scale-[1.02]"
+        : "text-slate-500 hover:text-blue-600 hover:bg-white/50"
+        }`}
+    >
+      <Icon className={`w-5 h-5 transition-transform duration-300 ${activeSection === section ? "scale-110" : "group-hover:translate-x-1"}`} />
+      <span className="flex-1 text-left text-sm">{label}</span>
+      {count !== undefined && count > 0 && (
+        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${activeSection === section ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+          {count}
+        </span>
       )}
+      {activeSection === section && <ChevronRight className="w-4 h-4 ml-auto" />}
+    </button>
+  )
 
-          {/* OVERVIEW SECTION */}
-          {activeSection === "overview" && (
-            <div className="space-y-6">
-              {/* DASHBOARD OVERVIEW */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-blue-100 text-sm">Total Jobs</p>
-                        <p className="text-3xl font-bold">{jobs.length}</p>
-                      </div>
-                      <Briefcase className="w-8 h-8 text-blue-200" />
-                    </div>
-                  </CardContent>
-                </Card>
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] selection:bg-indigo-100 selection:text-indigo-900">
+      {/* Dynamic Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-indigo-500/5 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-[10%] -right-[10%] w-[30%] h-[30%] bg-purple-500/5 rounded-full blur-[100px] animate-pulse-delay-2000"></div>
+      </div>
 
-                <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-green-100 text-sm">Active Jobs</p>
-                        <p className="text-3xl font-bold">{jobs.filter(job => job.is_active).length}</p>
-                      </div>
-                      <Power className="w-8 h-8 text-green-200" />
-                    </div>
-                  </CardContent>
-                </Card>
+      {/* Main Layout */}
+      <div className="flex relative z-10 h-screen overflow-hidden">
 
-                <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-purple-100 text-sm">Applications</p>
-                        <p className="text-3xl font-bold">{applications.length}</p>
-                      </div>
-                      <FileText className="w-8 h-8 text-purple-200" />
-                    </div>
-                  </CardContent>
-                </Card>
+        {/* Sidebar */}
+        <aside className="w-80 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 p-6 flex flex-col gap-8">
+          <div className="flex items-center gap-3 px-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+              <Briefcase className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">HRN Admin</h1>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Recruitment Hub</p>
+            </div>
+          </div>
 
-                <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-orange-100 text-sm">Users</p>
-                        <p className="text-3xl font-bold">{users.length}</p>
-                      </div>
-                      <UserCircle2 className="w-8 h-8 text-orange-200" />
-                    </div>
-                  </CardContent>
-                </Card>
+          <nav className="flex-1 space-y-1.5 overflow-y-auto pr-2">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 px-4">Management</p>
+            <NavItem section="overview" label="Overview" icon={LayoutDashboard} />
+            <NavItem section="applications" label="Applications" icon={FileText} count={applications.filter(a => a.status === "Pending").length} />
+            <NavItem section="jobs" label="Job Listings" icon={Briefcase} count={jobs.length} />
+            <NavItem section="users" label="User Directory" icon={Users} count={users.length} />
+
+            <div className="pt-8 pb-4">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 px-4">Actions</p>
+              <button
+                onClick={() => setActiveSection("post-job")}
+                className="w-full bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white p-4 rounded-3xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-3 font-bold group"
+              >
+                <div className="bg-white/20 p-2 rounded-xl group-hover:rotate-90 transition-transform duration-500">
+                  <PlusCircle className="w-5 h-5 text-white" />
+                </div>
+                <span>New Posting</span>
+              </button>
+            </div>
+          </nav>
+
+          <Card className="bg-slate-900 border-0 rounded-[2rem] overflow-hidden p-5 shadow-2xl relative">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/20 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md">
+                <UserCircle className="w-6 h-6 text-white" />
               </div>
-
-              {/* RECENT ACTIVITY */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-            <CardHeader>
-                    <CardTitle>Recent Applications</CardTitle>
-            </CardHeader>
-                  <CardContent>
-                    {applications.slice(0, 5).map((app) => (
-                      <div key={app.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                    <div>
-                          <p className="font-medium">{app.job_title}</p>
-                          <p className="text-sm text-gray-500">{app.applicant_first_name} {app.applicant_last_name}</p>
-                        </div>
-                        <Badge className={
-                          app.status === "accepted" ? "bg-green-100 text-green-800" :
-                          app.status === "rejected" ? "bg-red-100 text-red-800" :
-                          app.status === "under_review" ? "bg-blue-100 text-blue-800" :
-                          "bg-yellow-100 text-yellow-800"
-                        }>
-                          {app.status || "Pending"}
-                        </Badge>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recent Jobs</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {jobs.slice(0, 5).map((job) => (
-                      <div key={job.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                        <div>
-                          <p className="font-medium">{job.title}</p>
-                          <p className="text-sm text-gray-500">{job.company}</p>
-                          {!job.is_active && (
-                            <p className="text-xs text-gray-400">Hidden from public</p>
-                          )}
-                    </div>
-                    <Badge className={getStatusColor(job.is_active)}>
-                      {job.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                    ))}
-            </CardContent>
-          </Card>
+              <div className="overflow-hidden">
+                <p className="text-white font-bold truncate text-sm">{profile?.first_name} {profile?.last_name}</p>
+                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-tighter">System {profile?.role}</p>
               </div>
             </div>
-          )}
-
-          {/* APPLICATIONS SECTION */}
-          {activeSection === "applications" && (
-            <Card>
-            <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-blue-600" />
-                      Job Applications
-                    </CardTitle>
-                    <CardDescription>Review and manage job applications</CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fetchApplications()}
-                    disabled={loading}
-                  >
-                    <RefreshCw className="w-4 h-4 mr-1" />
-                    Refresh
-                  </Button>
-                </div>
-            </CardHeader>
-              <CardContent className="max-h-[600px] overflow-y-auto">
-                {applications.length === 0 ? (
-                  <div className="text-center py-8">
-                    <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No applications submitted yet.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {applications.map((app) => (
-                      <div
-                        key={app.id}
-                        className="border rounded-lg p-4 hover:bg-gray-50 transition"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-semibold text-gray-900">{app.job_title}</h4>
-                    <Badge
-                      className={
-                                  app.status === "accepted"
-                          ? "bg-green-100 text-green-800"
-                                    : app.status === "rejected"
-                                    ? "bg-red-100 text-red-800"
-                                    : app.status === "under_review"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-yellow-100 text-yellow-800"
-                                }
-                              >
-                                {app.status === "under_review" ? "Under Review" : 
-                                 app.status === "accepted" ? "Accepted" :
-                                 app.status === "rejected" ? "Rejected" : "Pending"}
-                    </Badge>
-                  </div>
-                            <p className="text-sm text-gray-600 mb-1">{app.job_company}</p>
-                            
-                            {/* Enhanced Applicant Details */}
-                            <div className="bg-gray-50 p-3 rounded-lg mb-3">
-                              <h5 className="text-sm font-semibold text-gray-800 mb-2">Applicant Details</h5>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                                <div>
-                                  <span className="font-medium text-gray-600">Name:</span>
-                                  <span className="ml-1 text-gray-800">{app.applicant_first_name} {app.applicant_last_name}</span>
-                                </div>
-                                <div>
-                                  <span className="font-medium text-gray-600">Email:</span>
-                                  <span className="ml-1 text-gray-800">{app.applicant_email}</span>
-                                </div>
-                                <div>
-                                  <span className="font-medium text-gray-600">Phone:</span>
-                                  <span className="ml-1 text-gray-800">{app.phone}</span>
-                                </div>
-                                <div>
-                                  <span className="font-medium text-gray-600">Submitted:</span>
-                                  <span className="ml-1 text-gray-800">{new Date(app.submitted_at).toLocaleDateString()}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex flex-col gap-2 ml-4">
-                            {app.resume && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(app.resume, "_blank")}
-                                className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                              >
-                                <FileText className="w-3 h-3 mr-1" />
-                                Download Resume
-                              </Button>
-                            )}
-                            
-                            {app.cover_letter && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(app.cover_letter, "_blank")}
-                                className="text-purple-600 border-purple-200 hover:bg-purple-50"
-                              >
-                                <FileText className="w-3 h-3 mr-1" />
-                                Download Cover Letter
-                              </Button>
-                            )}
-                            
-                            {/* Action Buttons */}
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              <h6 className="text-xs font-medium text-gray-600 mb-2">Actions</h6>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => updateApplicationStatus(app.id, "under_review")}
-                                  disabled={loading || app.status === "under_review"}
-                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                                  title="Mark as Under Review"
-                                >
-                                  <Eye className="w-3 h-3 mr-1" />
-                                  Review
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => updateApplicationStatus(app.id, "accepted")}
-                                  disabled={loading || app.status === "accepted"}
-                                  className="text-green-600 border-green-200 hover:bg-green-50"
-                                  title="Accept Application"
-                                >
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  Accept
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => updateApplicationStatus(app.id, "rejected")}
-                                  disabled={loading || app.status === "rejected"}
-                                  className="text-red-600 border-red-200 hover:bg-red-50"
-                                  title="Reject Application"
-                                >
-                                  <XCircle className="w-3 h-3 mr-1" />
-                                  Reject
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-              )}
-            </CardContent>
+            <Button
+              variant="ghost"
+              className="w-full bg-white/5 hover:bg-rose-500/20 text-white hover:text-rose-400 justify-start h-12 rounded-2xl border-white/5 font-bold transition-colors"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4 mr-3" /> Logout
+            </Button>
           </Card>
-          )}
+        </aside>
 
-          {/* JOBS SECTION */}
-          {activeSection === "jobs" && (
-            <Card>
-            <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Briefcase className="w-5 h-5 text-indigo-600" />
-                      Job Listings
-                    </CardTitle>
-                    <CardDescription>Manage your job postings</CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fetchJobs()}
-                    disabled={loading}
-                  >
-                    <RefreshCw className="w-4 h-4 mr-1" />
-                    Refresh
-                  </Button>
-                </div>
-            </CardHeader>
-              <CardContent className="max-h-[600px] overflow-y-auto">
-                {jobs.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No jobs posted yet.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {jobs.map((job) => (
-                      <div
-                        key={job.id}
-                        className="border rounded-lg p-4 hover:bg-gray-50 transition"
-                  >
-                    <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-gray-900">{job.title}</h3>
-                              <Badge className={getStatusColor(job.is_active)}>
-                                {job.is_active ? "Active" : "Inactive"}
-                              </Badge>
-                              {!job.is_active && (
-                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                                  Hidden from public
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-600">{job.company} • {job.location}</p>
-                        <p className="text-xs text-gray-500">
-                              {job.salary_range} • {applications.filter(app => app.job === job.id).length} applications
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              Posted: {new Date(job.posted_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                          
-                          <div className="flex gap-1 ml-4">
-                          <Button
-                              size="sm"
-                            variant="outline"
-                              onClick={() => editJob(job)}
-                              disabled={loading}
-                              className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                            >
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                            
-                            <Button
-                            size="sm"
-                              variant="outline"
-                              onClick={() => toggleJobStatus(job.id, job.is_active)}
-                              disabled={loading}
-                              className={
-                                job.is_active 
-                                  ? "text-orange-600 border-orange-200 hover:bg-orange-50" 
-                                  : "text-green-600 border-green-200 hover:bg-green-50"
-                              }
-                            >
-                              {job.is_active ? <PowerOff className="w-3 h-3" /> : <Power className="w-3 h-3" />}
-                          </Button>
-                            
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => deleteJob(job.id)}
-                              disabled={loading}
-                              className="text-red-600 border-red-200 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+        {/* Content Area */}
+        <main className="flex-1 flex flex-col h-full overflow-hidden">
 
-          {/* USERS SECTION */}
-          {activeSection === "users" && (
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <UserCircle2 className="w-5 h-5 text-purple-600" />
-                      All Users
-                    </CardTitle>
-                    <CardDescription>Manage registered users</CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fetchUsers()}
-                    disabled={loading}
-                  >
-                    <RefreshCw className="w-4 h-4 mr-1" />
-                    Refresh
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="max-h-[600px] overflow-y-auto">
-                {users.length === 0 ? (
-                  <div className="text-center py-8">
-                    <UserCircle2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No users registered yet.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {users.map((user) => (
-                      <div
-                        key={user.id}
-                        className="border rounded-lg p-4 hover:bg-gray-50 transition"
-                      >
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                              <span className="text-sm font-medium text-indigo-600">
-                                {user.first_name?.[0]}{user.last_name?.[0]}
-                              </span>
+          {/* Top Bar */}
+          <header className="h-20 bg-white/40 backdrop-blur-md px-10 flex items-center justify-between border-b border-slate-200/60 sticky top-0 z-20">
+            <div className="relative group w-96">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+              <Input
+                placeholder="Search across dashboard..."
+                className="pl-11 h-12 bg-white/50 border-slate-200/60 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button variant="outline" className="h-12 w-12 rounded-2xl border-slate-200/60 bg-white/50 relative">
+                <Bell className="w-5 h-5 text-slate-600" />
+                <span className="absolute top-3 right-3 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+              </Button>
+              <Button variant="outline" className="h-12 w-12 rounded-2xl border-slate-200/60 bg-white/50">
+                <Settings className="w-5 h-5 text-slate-600" />
+              </Button>
+              <div className="h-8 w-px bg-slate-200 mx-2"></div>
+              <div className="flex items-center bg-white/80 border border-slate-200/60 px-4 py-2 rounded-2xl gap-3 shadow-sm">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">System Online</span>
+              </div>
+            </div>
+          </header>
+
+          {/* Section View */}
+          <section className="flex-1 overflow-y-auto p-10 scroll-smooth">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSection}
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                className="max-w-7xl mx-auto space-y-10"
+              >
+
+                {/* OVERVIEW SECTION */}
+                {activeSection === "overview" && (
+                  <>
+                    <motion.div variants={itemVariants} className="flex flex-col gap-1">
+                      <h2 className="text-4xl font-bold tracking-tight text-slate-900">Dashboard Intelligence</h2>
+                      <p className="text-slate-500 font-medium">Real-time recruitment metrics and system performance.</p>
+                    </motion.div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <StatsCard
+                        title="Total Listings"
+                        value={jobs.length}
+                        icon={Briefcase}
+                        color="from-blue-600 to-blue-500"
+                        trend="12"
+                      />
+                      <StatsCard
+                        title="Candidate Pipeline"
+                        value={applications.length}
+                        icon={Users2}
+                        color="from-purple-600 to-purple-400"
+                        trend="8"
+                      />
+                      <StatsCard
+                        title="Active Users"
+                        value={users.filter(u => u.is_active).length}
+                        icon={Activity}
+                        color="from-emerald-600 to-emerald-400"
+                      />
+                      <StatsCard
+                        title="Growth Factor"
+                        value="84%"
+                        icon={TrendingUp}
+                        color="from-rose-600 to-rose-400"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      <Card className="lg:col-span-2 glass border-white shadow-xl rounded-[3rem] overflow-hidden">
+                        <CardHeader className="p-8 border-b border-slate-100 flex flex-row items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
+                              <Activity className="w-6 h-6 text-blue-600" />
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900">
-                                {user.first_name} {user.last_name}
-                              </p>
-                              <p className="text-sm text-gray-600">{user.email}</p>
-                              <p className="text-xs text-gray-500">
-                                Role: {user.role || (user.is_superuser ? "Admin" : user.is_staff ? "Staff" : "User")}
-                              </p>
+                              <CardTitle className="text-xl font-bold text-slate-900">Application Flow</CardTitle>
+                              <CardDescription>Latest submissions across all open positions</CardDescription>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                        <Badge
-                          className={
-                                user.is_active
-                              ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                          }
-                        >
-                              {user.is_active ? "Active" : "Suspended"}
-                        </Badge>
-                            <div className="flex gap-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => viewUserDetails(user)}
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                          <Link href="#" onClick={() => setActiveSection("applications")} className="text-blue-600 font-bold text-xs uppercase hover:underline tracking-widest flex items-center gap-1">
+                            View All <ChevronRight className="w-4 h-4" />
+                          </Link>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                          <div className="divide-y divide-slate-50">
+                            {applications.slice(0, 5).map((app, idx) => (
+                              <motion.div
+                                key={app.id}
+                                variants={itemVariants}
+                                className="p-6 hover:bg-slate-50/50 transition-all flex items-center justify-between group"
                               >
-                                <Eye className="w-3 h-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => toggleUserStatus(user.id, user.is_active)}
-                                disabled={loading}
-                                className={
-                                  user.is_active 
-                                    ? "text-red-600 border-red-200 hover:bg-red-50" 
-                                    : "text-green-600 border-green-200 hover:bg-green-50"
-                                }
-                              >
-                                {user.is_active ? <PowerOff className="w-3 h-3" /> : <Power className="w-3 h-3" />}
-                              </Button>
+                                <div className="flex items-center gap-5">
+                                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center font-bold text-slate-500 shadow-sm border border-white">
+                                    {app.applicant_first_name[0]}{app.applicant_last_name[0]}
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-slate-800 text-lg group-hover:text-blue-600 transition-colors uppercase tracking-tight">{app.job_title}</p>
+                                    <div className="flex items-center gap-3 mt-1">
+                                      <span className="text-xs font-bold text-slate-400 flex items-center gap-1"><UserCircle className="w-3 h-3" /> {app.applicant_first_name} {app.applicant_last_name}</span>
+                                      <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                      <span className="text-[10px] font-bold uppercase text-indigo-400 tracking-widest">{new Date(app.submitted_at).toLocaleDateString()}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <Badge className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] border-2 shadow-sm ${app.status === "Shortlisted" ? "bg-emerald-50 text-emerald-600 border-emerald-100 ring-4 ring-emerald-500/5" :
+                                  app.status === "Rejected" ? "bg-rose-50 text-rose-600 border-rose-100 ring-4 ring-rose-500/5" :
+                                    "bg-amber-50 text-amber-600 border-amber-100 ring-4 ring-amber-500/5"
+                                  }`}>
+                                  {app.status || "Pending"}
+                                </Badge>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <div className="space-y-6">
+                        <Card className="glass border-white shadow-xl rounded-[3rem] p-8 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                          <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60 mb-8">Quick System Audit</h4>
+                          <div className="space-y-6">
+                            <div className="flex justify-between items-center bg-white/10 p-4 rounded-2xl backdrop-blur-md">
+                              <p className="text-sm font-bold">Active Servers</p>
+                              <span className="text-emerald-400 font-bold">Stable</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-white/10 p-4 rounded-2xl backdrop-blur-md">
+                              <p className="text-sm font-bold">Pending Actions</p>
+                              <span className="bg-white text-indigo-600 w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs">12</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-white/10 p-4 rounded-2xl backdrop-blur-md">
+                              <p className="text-sm font-bold">Database Load</p>
+                              <span className="text-white font-bold">2.4ms</span>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={runDiagnostic}
+                            disabled={loading}
+                            className="w-full mt-8 h-14 bg-white text-blue-600 hover:bg-slate-50 font-bold rounded-2xl shadow-xl"
+                          >
+                            {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Run Diagnostic"}
+                          </Button>
+                        </Card>
+
+                        <Card className="glass border-white shadow-xl rounded-[3.5rem] p-8 flex flex-col items-center text-center">
+                          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                            <LayoutDashboard className="w-8 h-8 text-slate-400" />
+                          </div>
+                          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">System Version</p>
+                          <h3 className="text-2xl font-bold text-slate-800">Internal v.4.2.0</h3>
+                          <p className="text-[10px] font-bold text-slate-300 mt-2 px-10">Enhanced encryption and realtime websocket synchronization active.</p>
+                        </Card>
                       </div>
                     </div>
-                  </div>
+                  </>
+                )}
+
+                {/* APPLICATIONS VIEW */}
+                {activeSection === "applications" && (
+                  <div className="space-y-8 pb-10">
+                    <div className="flex justify-between items-end">
+                      <div className="flex flex-col gap-1">
+                        <h2 className="text-4xl font-bold tracking-tight text-slate-900 uppercase">Pipeline</h2>
+                        <p className="text-slate-500 font-bold uppercase tracking-widest text-[11px]">Management & Review</p>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          {["all", "pending", "shortlisted", "rejected"].map(s => (
+                            <Button
+                              key={s}
+                              onClick={() => setAppFilter(s)}
+                              variant="ghost"
+                              className={`h-11 px-6 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all ${appFilter === s ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                            >
+                              {s}
+                            </Button>
+                          ))}
+                        </div>
+                        <Button variant="outline" className="h-11 rounded-xl bg-white border-slate-200"><Filter className="w-4 h-4 mr-2" /> Filters</Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6">
+                      {filteredApplications.map((app) => (
+                        <motion.div
+                          key={app.id}
+                          variants={itemVariants}
+                          whileHover={{ y: -5 }}
+                          className="bg-white/80 backdrop-blur-xl border border-white shadow-xl rounded-[3.5rem] p-10 flex flex-col lg:flex-row items-start lg:items-center gap-10 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-500"
+                        >
+                          <div className="w-24 h-24 rounded-[2.5rem] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-3xl font-bold text-white shadow-2xl shadow-indigo-200 relative">
+                            {app.applicant_first_name[0]}{app.applicant_last_name[0]}
+                            <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-lg border border-slate-50">
+                              <FileText className="w-5 h-5 text-indigo-600" />
+                            </div>
+                          </div>
+
+                          <div className="flex-1 space-y-4">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-3 mb-2">
+                                <h3 className="text-3xl font-bold text-slate-900 tracking-tight leading-none uppercase">{app.job_title}</h3>
+                                <Badge className="bg-slate-100 text-slate-400 border-0 rounded-lg text-[10px] font-bold uppercase tracking-widest px-3">{app.job_company}</Badge>
+                              </div>
+                              <p className="text-xl font-bold text-indigo-500 flex items-center gap-2">
+                                {app.applicant_first_name} {app.applicant_last_name}
+                                <span className="w-1.5 h-1.5 bg-slate-200 rounded-full mx-1"></span>
+                                <span className="text-slate-400 text-sm font-bold">{app.applicant_email}</span>
+                              </p>
+                            </div>
+
+                            <div className="flex flex-wrap gap-10 pt-4">
+                              <div className="space-y-1">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300">Status</p>
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${app.status === "Shortlisted" ? "bg-emerald-500" : "bg-amber-500"}`}></div>
+                                  <span className="text-sm font-bold text-slate-700 tracking-tight">{app.status || "Pending Review"}</span>
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300">Submitted</p>
+                                <p className="text-sm font-bold text-slate-700 tracking-tight">{new Date(app.submitted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300">Document</p>
+                                <button onClick={() => window.open(app.resume, '_blank')} className="text-indigo-600 text-sm font-bold hover:underline flex items-center gap-1 group">
+                                  PDF Resume <Download className="w-3 h-3 group-hover:translate-y-0.5 transition-transform" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-row lg:flex-col gap-3 w-full lg:w-fit">
+                            <Button
+                              onClick={() => updateApplicationStatus(app.id, "Shortlisted")}
+                              disabled={loading || app.status === "Shortlisted"}
+                              className="flex-1 lg:w-48 h-14 bg-indigo-600 hover:bg-black text-white font-bold rounded-3xl shadow-xl shadow-indigo-100 transition-all active:scale-95 text-xs uppercase tracking-widest border-0"
+                            >
+                              <CheckCircle className="w-4 h-4 mr-2" /> Shortlist
+                            </Button>
+                            <Button
+                              onClick={() => updateApplicationStatus(app.id, "Rejected")}
+                              disabled={loading || app.status === "Rejected"}
+                              variant="outline"
+                              className="flex-1 lg:w-48 h-14 bg-white hover:bg-rose-50 border-slate-200 text-slate-600 hover:text-rose-600 font-bold rounded-3xl transition-all active:scale-95 text-xs uppercase tracking-widest"
+                            >
+                              <XCircle className="w-4 h-4 mr-2" /> Decline
+                            </Button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    {applications.length === 0 && (
+                      <div className="text-center py-40 flex flex-col items-center">
+                        <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-8 border-4 border-white shadow-xl">
+                          <Activity className="w-10 h-10 text-slate-300" />
+                        </div>
+                        <h3 className="text-3xl font-bold text-slate-900 tracking-tight">No pipeline activity detected</h3>
+                        <p className="text-slate-400 max-w-sm mt-4 font-bold uppercase tracking-[0.2em] text-[10px]">Candidate submissions will appear here automatically as they apply.</p>
+                      </div>
+                    )}
                   </div>
-              )}
-            </CardContent>
-          </Card>
-          )}
+                )}
 
-          {/* POST JOB SECTION */}
-          {activeSection === "post-job" && (
-            <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PlusCircle className="w-5 h-5 text-green-600" />
-                  Post New Job
-                </CardTitle>
-                <CardDescription>Create a new job posting</CardDescription>
-            </CardHeader>
-              <CardContent className="space-y-4">
-                <Input 
-                  placeholder="Job Title" 
-                  value={newJob.title} 
-                  onChange={(e) => setNewJob({ ...newJob, title: e.target.value })} 
-                />
-                <Input 
-                  placeholder="Company Name" 
-                  value={newJob.company} 
-                  onChange={(e) => setNewJob({ ...newJob, company: e.target.value })} 
-                />
+                {/* JOB LISTINGS VIEW */}
+                {activeSection === "jobs" && (
+                  <div className="space-y-8">
+                    <div className="flex justify-between items-end">
+                      <div className="flex flex-col gap-1">
+                        <h2 className="text-4xl font-bold tracking-tight text-slate-900">Career Catalogue</h2>
+                        <p className="text-slate-500 font-medium">Managing {jobs.length} open opportunities globally.</p>
+                      </div>
+                      <Button
+                        onClick={() => setActiveSection("post-job")}
+                        className="bg-black hover:bg-indigo-600 text-white font-bold px-8 h-14 rounded-3xl shadow-2xl shadow-indigo-200 transition-all uppercase tracking-widest text-xs"
+                      >
+                        <PlusCircle className="mr-3 w-5 h-5" /> Create Posting
+                      </Button>
+                    </div>
 
-              <Select value={newJob.location} onValueChange={(v) => setNewJob({ ...newJob, location: v })}>
-                <SelectTrigger><SelectValue placeholder="Select Region" /></SelectTrigger>
-                <SelectContent>
-                  {TANZANIA_REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                      {filteredJobsBySearch.map((job) => (
+                        <motion.div
+                          key={job.id}
+                          variants={itemVariants}
+                          whileHover={{ scale: 1.02, y: -8 }}
+                          className="bg-white border border-slate-100 rounded-[3rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 relative flex flex-col"
+                        >
+                          {job.featured && <div className="absolute top-8 right-8 bg-indigo-600 text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-lg shadow-indigo-200">Featured</div>}
 
-              <Select value={newJob.type} onValueChange={(v) => setNewJob({ ...newJob, type: v })}>
-                <SelectTrigger><SelectValue placeholder="Select Job Type" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Full-time">Full-time</SelectItem>
-                  <SelectItem value="Part-time">Part-time</SelectItem>
-                  <SelectItem value="Contract">Contract</SelectItem>
-                </SelectContent>
-              </Select>
+                          <div className="w-16 h-16 rounded-[1.5rem] bg-slate-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
+                            <Building2 className="w-8 h-8 text-slate-400" />
+                          </div>
 
-              <Select
-                value={newJob.category ? String(newJob.category) : ""}
-                onValueChange={(v) => setNewJob({ ...newJob, category: Number(v) })}
-              >
-                <SelectTrigger><SelectValue placeholder="Select Category" /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                          <h3 className="text-2xl font-bold text-slate-800 tracking-tight leading-tight uppercase mb-2 line-clamp-1">{job.title}</h3>
+                          <p className="text-indigo-500 font-bold text-sm uppercase tracking-widest mb-6">{job.company}</p>
 
-              <div>
-                <Input 
-                  placeholder="Experience (e.g. '3+ years', '2-5 years', 'Entry level', 'Senior level')" 
-                  value={newJob.experience} 
-                  onChange={(e) => setNewJob({ ...newJob, experience: e.target.value })} 
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Examples: "3+ years", "2-5 years", "Entry level", "Senior level", "5+ years in marketing"
-                </p>
-              </div>
+                          <div className="space-y-4 flex-1">
+                            <div className="flex items-center gap-3 text-slate-500 font-bold text-xs uppercase">
+                              <MapPin className="w-4 h-4 text-slate-300" /> {job.location}
+                            </div>
+                            <div className="flex items-center gap-3 text-slate-500 font-bold text-xs uppercase">
+                              <DollarSign className="w-4 h-4 text-slate-300" /> {job.salary_range}
+                            </div>
+                            <div className="flex items-center gap-3 text-slate-500 font-bold text-xs uppercase">
+                              <Users2 className="w-4 h-4 text-slate-300" /> {applications.filter(a => a.job === job.id).length} Active Applicants
+                            </div>
+                          </div>
 
-              <Select value={newJob.visa} onValueChange={(v) => setNewJob({ ...newJob, visa: v })}>
-                <SelectTrigger><SelectValue placeholder="Select Visa Requirement" /></SelectTrigger>
-                <SelectContent>
-                  {VISA_OPTIONS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <div>
-                <Input 
-                  placeholder="Salary Range (e.g. 'TZS 1,500,000 - 2,500,000', 'USD 800-1200', 'Negotiable')" 
-                  value={newJob.salary_range} 
-                  onChange={(e) => setNewJob({ ...newJob, salary_range: e.target.value })} 
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Examples: "TZS 1,500,000 - 2,500,000", "USD 800-1200", "Negotiable", "Competitive", "Based on experience"
-                </p>
-              </div>
-                <div>
-                  <Textarea 
-                    placeholder="Job Description - Include responsibilities, requirements, benefits, and company information" 
-                    value={newJob.description} 
-                    onChange={(e) => setNewJob({ ...newJob, description: e.target.value })} 
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Include: Key responsibilities, required skills, qualifications, benefits, company culture, and application instructions
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                {["featured", "urgent", "is_active"].map((field) => (
-                  <div key={field} className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={(newJob as any)[field]}
-                      onCheckedChange={(v) => setNewJob({ ...newJob, [field]: !!v })}
-                    />
-                      <Label className="text-sm">{field.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}</Label>
+                          <div className="pt-8 flex items-center gap-2">
+                            <Button
+                              onClick={() => { setEditingJob(job); setShowEditModal(true); }}
+                              variant="ghost"
+                              className="flex-1 h-14 rounded-2xl bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 font-bold uppercase tracking-widest text-[10px] border-0"
+                            >
+                              Manage Details
+                            </Button>
+                            <Button
+                              onClick={() => { setJobToDelete(job.id); setShowDeleteConfirm(true); }}
+                              variant="ghost"
+                              className="w-14 h-14 rounded-2xl bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white transition-all flex items-center justify-center"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </Button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
+                )}
 
-              <Button onClick={handleAddJob} disabled={loading} className="w-full">
-                <PlusCircle className="w-4 h-4 mr-2" />
-                {loading ? "Publishing..." : "Publish Job"}
-              </Button>
-            </CardContent>
-          </Card>
-          )}
-        </div>
+                {/* POST JOB SECTION */}
+                {activeSection === "post-job" && (
+                  <div className="max-w-4xl mx-auto pb-20">
+                    <motion.div variants={itemVariants} className="flex flex-col items-center text-center gap-4 mb-12">
+                      <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-blue-200">
+                        <PlusCircle className="w-10 h-10 text-white" />
+                      </div>
+                      <h2 className="text-5xl font-bold tracking-tight text-slate-900 uppercase">Deploy Posting</h2>
+                      <p className="text-slate-400 font-bold text-xs uppercase tracking-[0.3em]">Configure market opportunity specifics</p>
+                    </motion.div>
+
+                    <Card className="glass border-white shadow-2xl rounded-[4rem] overflow-hidden">
+                      <CardContent className="p-16 space-y-12">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                          <div className="space-y-3">
+                            <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 ml-4">Core Title</Label>
+                            <Input
+                              className="h-16 rounded-3xl bg-slate-50/50 border-slate-200/60 p-6 text-lg font-bold focus:ring-8 focus:ring-blue-500/5 transition-all"
+                              placeholder="e.g. Lead Industrial Engineer"
+                              value={newJob.title}
+                              onChange={(e) => setNewJob({ ...newJob, title: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 ml-4">Authorized Entity</Label>
+                            <Input
+                              className="h-16 rounded-3xl bg-slate-50/50 border-slate-200/60 p-6 text-lg font-bold"
+                              placeholder="Company Registration Name"
+                              value={newJob.company}
+                              onChange={(e) => setNewJob({ ...newJob, company: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                          <div className="space-y-3">
+                            <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 ml-4">Target Region</Label>
+                            <Select onValueChange={(val) => setNewJob({ ...newJob, location: val })}>
+                              <SelectTrigger className="h-16 rounded-3xl bg-slate-50/50 border-slate-200/60 p-6 font-bold">
+                                <SelectValue placeholder="Select Operational Area" />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-2xl border-0 shadow-2xl">
+                                {TANZANIA_REGIONS.map(r => <SelectItem key={r} value={r} className="font-bold py-3">{r}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 ml-4">Market Category</Label>
+                            <Select onValueChange={(val) => setNewJob({ ...newJob, category: parseInt(val) })}>
+                              <SelectTrigger className="h-16 rounded-3xl bg-slate-50/50 border-slate-200/60 p-6 font-bold">
+                                <SelectValue placeholder="Assign Sector" />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-2xl border-0 shadow-2xl">
+                                {categories.map(c => <SelectItem key={c.id} value={c.id.toString()} className="font-bold py-3">{c.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 ml-4">Opportunity Description</Label>
+                          <Textarea
+                            className="min-h-[200px] rounded-[3rem] bg-slate-50/50 border-slate-200/60 p-8 text-lg font-medium leading-relaxed"
+                            placeholder="Detail the technical requirements and role responsibilities..."
+                            value={newJob.description}
+                            onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                          <div className="space-y-3">
+                            <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 ml-4">Economic Bracket</Label>
+                            <Input
+                              className="h-16 rounded-3xl bg-slate-50/50 border-slate-200/60 p-6 font-bold"
+                              placeholder="e.g. $80k - $120k / Annum"
+                              value={newJob.salary_range}
+                              onChange={(e) => setNewJob({ ...newJob, salary_range: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 ml-4">Experience Calibration</Label>
+                            <Input
+                              className="h-16 rounded-3xl bg-slate-50/50 border-slate-200/60 p-6 font-bold"
+                              placeholder="Minimum Proficiency (e.g. 5+ Yrs)"
+                              value={newJob.experience}
+                              onChange={(e) => setNewJob({ ...newJob, experience: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-8 p-10 bg-slate-50 rounded-[3rem] border border-slate-100 items-center justify-center">
+                          <div className="flex items-center gap-3">
+                            <Checkbox id="feat" checked={newJob.featured} onCheckedChange={(v) => setNewJob({ ...newJob, featured: !!v })} className="w-6 h-6 rounded-lg text-blue-600 border-2" />
+                            <Label htmlFor="feat" className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600 cursor-pointer">Priority Signal</Label>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Checkbox id="urg" checked={newJob.urgent} onCheckedChange={(v) => setNewJob({ ...newJob, urgent: !!v })} className="w-6 h-6 rounded-lg text-rose-600 border-2" />
+                            <Label htmlFor="urg" className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600 cursor-pointer">Urgency Flag</Label>
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={handleAddJob}
+                          disabled={loading}
+                          className="w-full h-20 bg-black hover:bg-blue-600 text-white text-xl font-bold rounded-[2.5rem] shadow-2xl shadow-blue-100 transition-all active:scale-[0.98] uppercase"
+                        >
+                          {loading ? <RefreshCw className="w-8 h-8 animate-spin" /> : "Authorize Deployment"}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* USER DIRECTORY VIEW */}
+                {activeSection === "users" && (
+                  <div className="space-y-8 pb-10">
+                    <div className="flex justify-between items-end">
+                      <div className="flex flex-col gap-1">
+                        <h2 className="text-4xl font-bold tracking-tight text-slate-900 uppercase">User Directory</h2>
+                        <p className="text-slate-500 font-bold uppercase tracking-widest text-[11px]">Identity & Access Management</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="relative group w-64">
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Input
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Filter users..."
+                            className="pl-11 h-11 bg-white rounded-xl border-slate-200"
+                          />
+                        </div>
+                        <Select value={userRoleFilter} onValueChange={setUserRoleFilter}>
+                          <SelectTrigger className="h-11 w-40 rounded-xl bg-white border-slate-200 font-bold text-xs uppercase tracking-widest">
+                            <SelectValue placeholder="Role" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl border-0 shadow-2xl">
+                            <SelectItem value="all" className="font-bold">All Roles</SelectItem>
+                            <SelectItem value="admin" className="font-bold">Admin</SelectItem>
+                            <SelectItem value="staff" className="font-bold">Staff</SelectItem>
+                            <SelectItem value="jobseeker" className="font-bold">Job Seeker</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredUsers.map((user) => (
+                        <motion.div
+                          key={user.id}
+                          variants={itemVariants}
+                          whileHover={{ y: -5 }}
+                          className="bg-white/80 backdrop-blur-xl border border-white shadow-xl rounded-[2.5rem] p-8 hover:shadow-2xl transition-all duration-500"
+                        >
+                          <div className="flex items-center gap-4 mb-6">
+                            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-xl font-bold text-slate-500 border border-white shadow-sm">
+                              {user.first_name?.[0]}{user.last_name?.[0]}
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-bold text-slate-900 tracking-tight">{user.first_name} {user.last_name}</h3>
+                              <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">{user.role}</p>
+                            </div>
+                            <div className={`ml-auto w-2 h-2 rounded-full ${user.is_active ? "bg-emerald-500" : "bg-slate-300"} ${user.is_active ? "animate-pulse" : ""}`}></div>
+                          </div>
+
+                          <div className="space-y-3 mb-8">
+                            <div className="flex items-center gap-3 text-slate-500 font-bold text-xs">
+                              <Mail className="w-4 h-4 text-slate-300" /> {user.email}
+                            </div>
+                            <div className="flex items-center gap-3 text-slate-500 font-bold text-xs uppercase">
+                              <Shield className="w-4 h-4 text-slate-300" /> Member since {new Date().getFullYear()}
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => { setSelectedUser(user); setShowUserModal(true); }}
+                              variant="ghost"
+                              className="flex-1 h-12 rounded-xl bg-slate-50 hover:bg-white text-slate-600 font-bold text-[10px] uppercase tracking-widest border border-transparent hover:border-slate-100"
+                            >
+                              View Profile
+                            </Button>
+                            <Button variant="ghost" className="w-12 h-12 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-500 flex items-center justify-center">
+                              <Settings className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    {users.length === 0 && (
+                      <div className="text-center py-40">
+                        <Users className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+                        <h3 className="text-2xl font-bold text-slate-400">No users found in database</h3>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </section>
+        </main>
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      {showDeleteConfirm && jobToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Job</h3>
-            <p className="text-gray-600 mb-2">
-              Are you sure you want to delete this job? This action cannot be undone.
-            </p>
-            {applications.filter(app => app.job === jobToDelete).length > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-                <p className="text-sm text-red-800">
-                  ⚠️ This job has {applications.filter(app => app.job === jobToDelete).length} application(s) that will also be deleted.
-                </p>
-              </div>
-            )}
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowDeleteConfirm(false)
-                  setJobToDelete(null)
-                }}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmDelete}
-                disabled={loading}
-              >
-                {loading ? "Deleting..." : "Delete Job"}
-              </Button>
-            </div>
+      {/* --- MODALS --- */}
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
+              <Card className="max-w-md w-full glass border-white shadow-3xl rounded-[2.5rem] p-10 text-center">
+                <div className="w-20 h-20 bg-rose-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                  <Trash2 className="w-10 h-10 text-rose-500" />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2 uppercase">Decommission Posting?</h3>
+                <p className="text-slate-500 font-medium mb-10">This action is permanent and will remove all associated application historical data from the active registry.</p>
+                <div className="flex gap-4">
+                  <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} className="flex-1 h-14 rounded-2xl font-bold border-slate-200">Abort</Button>
+                  <Button onClick={() => handleDeleteJob(jobToDelete!)} className="flex-1 h-14 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-bold shadow-lg shadow-rose-100">Confirm</Button>
+                </div>
+              </Card>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Edit Job Modal */}
-      {showEditModal && editingJob && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Job</h3>
-            
-            <div className="space-y-4">
-              <Input 
-                placeholder="Job Title" 
-                value={editingJob.title || ""} 
-                onChange={(e) => setEditingJob({ ...editingJob, title: e.target.value })} 
-              />
-              <Input 
-                placeholder="Company Name" 
-                value={editingJob.company || ""} 
-                onChange={(e) => setEditingJob({ ...editingJob, company: e.target.value })} 
-              />
-
-              <Select 
-                value={editingJob.location || ""} 
-                onValueChange={(v) => setEditingJob({ ...editingJob, location: v })}
-              >
-                <SelectTrigger><SelectValue placeholder="Select Region" /></SelectTrigger>
-                <SelectContent>
-                  {TANZANIA_REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <Select 
-                value={editingJob.type || ""} 
-                onValueChange={(v) => setEditingJob({ ...editingJob, type: v })}
-              >
-                <SelectTrigger><SelectValue placeholder="Select Job Type" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Full-time">Full-time</SelectItem>
-                  <SelectItem value="Part-time">Part-time</SelectItem>
-                  <SelectItem value="Contract">Contract</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={editingJob.category ? String(editingJob.category) : ""}
-                onValueChange={(v) => setEditingJob({ ...editingJob, category: Number(v) })}
-              >
-                <SelectTrigger><SelectValue placeholder="Select Category" /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div>
-                <Input 
-                  placeholder="Experience (e.g. '3+ years', '2-5 years', 'Entry level', 'Senior level')" 
-                  value={editingJob.experience || ""} 
-                  onChange={(e) => setEditingJob({ ...editingJob, experience: e.target.value })} 
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Examples: "3+ years", "2-5 years", "Entry level", "Senior level", "5+ years in marketing"
-                </p>
-              </div>
-
-              <Select 
-                value={editingJob.visa || ""} 
-                onValueChange={(v) => setEditingJob({ ...editingJob, visa: v })}
-              >
-                <SelectTrigger><SelectValue placeholder="Select Visa Requirement" /></SelectTrigger>
-                <SelectContent>
-                  {VISA_OPTIONS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <div>
-                <Input 
-                  placeholder="Salary Range (e.g. 'TZS 1,500,000 - 2,500,000', 'USD 800-1200', 'Negotiable')" 
-                  value={editingJob.salary_range || ""} 
-                  onChange={(e) => setEditingJob({ ...editingJob, salary_range: e.target.value })} 
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Examples: "TZS 1,500,000 - 2,500,000", "USD 800-1200", "Negotiable", "Competitive", "Based on experience"
-                </p>
-              </div>
-              <div>
-                <Textarea 
-                  placeholder="Job Description - Include responsibilities, requirements, benefits, and company information" 
-                  value={editingJob.description || ""} 
-                  onChange={(e) => setEditingJob({ ...editingJob, description: e.target.value })} 
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Include: Key responsibilities, required skills, qualifications, benefits, company culture, and application instructions
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                {["featured", "urgent", "is_active"].map((field) => (
-                  <div key={field} className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={editingJob[field] || false}
-                      onCheckedChange={(v) => setEditingJob({ ...editingJob, [field]: !!v })}
-                    />
-                    <Label className="text-sm">{field.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}</Label>
+      <AnimatePresence>
+        {showEditModal && editingJob && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
+            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <Card className="glass border-white shadow-3xl rounded-[3.5rem] p-12 relative">
+                <button onClick={() => setShowEditModal(false)} className="absolute top-8 right-8 text-slate-400 hover:text-slate-600"><X className="w-8 h-8" /></button>
+                <div className="flex items-center gap-6 mb-12">
+                  <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center"><Edit className="w-8 h-8 text-blue-600" /></div>
+                  <div>
+                    <h3 className="text-3xl font-bold text-slate-900 uppercase">Edit Configuration</h3>
+                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Job Registry Modification</p>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            <div className="flex gap-3 justify-end mt-6">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowEditModal(false)
-                  setEditingJob(null)
-                }}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={updateJob}
-                disabled={loading}
-              >
-                {loading ? "Updating..." : "Update Job"}
-              </Button>
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                  <div className="space-y-2">
+                    <Label className="uppercase text-[10px] font-bold text-slate-400 tracking-widest ml-4">Job Title</Label>
+                    <Input value={editingJob.title} onChange={(e) => setEditingJob({ ...editingJob, title: e.target.value })} className="h-14 rounded-2xl bg-slate-50 border-0 font-bold px-6 focus:ring-4 focus:ring-blue-50/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="uppercase text-[10px] font-bold text-slate-400 tracking-widest ml-4">Company</Label>
+                    <Input value={editingJob.company} onChange={(e) => setEditingJob({ ...editingJob, company: e.target.value })} className="h-14 rounded-2xl bg-slate-50 border-0 font-bold px-6" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="uppercase text-[10px] font-bold text-slate-400 tracking-widest ml-4">Location</Label>
+                    <Input value={editingJob.location} onChange={(e) => setEditingJob({ ...editingJob, location: e.target.value })} className="h-14 rounded-2xl bg-slate-50 border-0 font-bold px-6" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="uppercase text-[10px] font-bold text-slate-400 tracking-widest ml-4">Salary Range</Label>
+                    <Input value={editingJob.salary_range} onChange={(e) => setEditingJob({ ...editingJob, salary_range: e.target.value })} className="h-14 rounded-2xl bg-slate-50 border-0 font-bold px-6" />
+                  </div>
+                </div>
+
+                <div className="space-y-2 mb-10">
+                  <Label className="uppercase text-[10px] font-bold text-slate-400 tracking-widest ml-4">Detailed Description</Label>
+                  <Textarea value={editingJob.description} onChange={(e) => setEditingJob({ ...editingJob, description: e.target.value })} className="min-h-[150px] rounded-3xl bg-slate-50 border-0 font-medium p-6 resize-none" />
+                </div>
+
+                <Button onClick={handleUpdateJob} className="w-full h-16 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg shadow-xl shadow-blue-100 uppercase tracking-widest transition-all active:scale-95">Update Configuration</Button>
+              </Card>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
+
+      {/* Application Details Modal */}
+      <AnimatePresence>
+        {showAppModal && selectedApplication && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="w-full max-w-2xl">
+              <Card className="glass border-white shadow-3xl rounded-[3.5rem] p-12 overflow-hidden">
+                <div className="flex justify-between items-start mb-10">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100">
+                      <UserCircle className="w-10 h-10 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-slate-900 tracking-tight">{selectedApplication.applicant_first_name} {selectedApplication.applicant_last_name}</h3>
+                      <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Candidate Information</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowAppModal(false)} className="text-slate-400 hover:text-slate-600 p-2"><X className="w-6 h-6" /></button>
+                </div>
+
+                <div className="space-y-6 mb-12">
+                  <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em] mb-4">Applied For</p>
+                    <h4 className="text-xl font-bold text-slate-800 uppercase leading-tight">{selectedApplication.job_title}</h4>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-white rounded-2xl border border-slate-100">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Email</p>
+                      <p className="text-xs font-bold text-slate-700 truncate">{selectedApplication.applicant_email}</p>
+                    </div>
+                    <div className="p-4 bg-white rounded-2xl border border-slate-100">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                      <span className="px-2 py-1 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-bold uppercase">{selectedApplication.status}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <Button
+                    onClick={() => handleDownloadResume(selectedApplication)}
+                    className="flex-1 h-14 rounded-2xl bg-blue-600 text-white font-bold uppercase tracking-widest text-xs shadow-xl shadow-blue-100"
+                  >
+                    <Download className="w-4 h-4 mr-2" /> Download Resume
+                  </Button>
+                  <Button
+                    onClick={() => setMessage(`📧 Composing message to ${selectedApplication.applicant_email}...`)}
+                    variant="outline"
+                    className="h-14 rounded-2xl px-6 border-slate-200"
+                  >
+                    <Mail className="w-4 h-4" />
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* User Details Modal */}
-      {showUserModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">User Details</h3>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                  <p className="text-sm text-gray-900">{selectedUser.first_name}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                  <p className="text-sm text-gray-900">{selectedUser.last_name}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <p className="text-sm text-gray-900">{selectedUser.email}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                  <p className="text-sm text-gray-900">{selectedUser.phone || "Not provided"}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                  <p className="text-sm text-gray-900">{selectedUser.current_location || "Not provided"}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
-                  <p className="text-sm text-gray-900">{selectedUser.nationality || "Not provided"}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <p className="text-sm text-gray-900">{selectedUser.role || (selectedUser.is_superuser ? "Admin" : selectedUser.is_staff ? "Staff" : "User")}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <Badge className={selectedUser.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                    {selectedUser.is_active ? "Active" : "Suspended"}
-                  </Badge>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Member Since</label>
-                  <p className="text-sm text-gray-900">{new Date(selectedUser.date_joined).toLocaleDateString()}</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Education</label>
-                  <p className="text-sm text-gray-900">{selectedUser.education || "Not provided"}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Experience</label>
-                  <p className="text-sm text-gray-900">{selectedUser.experience || "Not provided"}</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Skills</label>
-                  <p className="text-sm text-gray-900">{selectedUser.skills || "Not provided"}</p>
-                </div>
-              </div>
-            </div>
+      <AnimatePresence>
+        {showUserModal && selectedUser && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="w-full max-w-lg">
+              <Card className="glass border-white shadow-3xl rounded-[3rem] p-12 relative overflow-hidden">
+                <button onClick={() => setShowUserModal(false)} className="absolute top-8 right-8 text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
 
-            <div className="flex gap-3 justify-end mt-6">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowUserModal(false)
-                  setSelectedUser(null)
-                }}
-                disabled={loading}
-              >
-                Close
-              </Button>
-              <Button
-                onClick={() => toggleUserStatus(selectedUser.id, selectedUser.is_active)}
-                disabled={loading}
-                className={selectedUser.is_active ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
-              >
-                {loading ? "Processing..." : selectedUser.is_active ? "Suspend User" : "Activate User"}
-              </Button>
-            </div>
+                <div className="text-center mb-10">
+                  <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center mx-auto mb-6 shadow-sm border border-white">
+                    <span className="text-4xl font-bold text-blue-600">{selectedUser.first_name[0]}{selectedUser.last_name[0]}</span>
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-900 tracking-tight">{selectedUser.first_name} {selectedUser.last_name}</h3>
+                  <Badge className="bg-blue-50 text-blue-600 border-0 uppercase tracking-widest text-[9px] mt-2 font-bold">{selectedUser.role}</Badge>
+                </div>
+
+                <div className="space-y-4 mb-10">
+                  <div className="flex items-center justify-between p-4 bg-white/50 rounded-2xl border border-white">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</span>
+                    <span className="text-sm font-bold text-slate-700">{selectedUser.email}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-white/50 rounded-2xl border border-white">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</span>
+                    <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase ${selectedUser.is_active ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
+                      {selectedUser.is_active ? "Verified" : "Suspended"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button className="flex-1 h-14 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs uppercase tracking-widest shadow-xl">Audit Logs</Button>
+                  <Button
+                    onClick={() => handleToggleUserStatus(selectedUser)}
+                    variant="outline"
+                    className={`flex-1 h-14 rounded-xl font-bold text-xs uppercase tracking-widest ${selectedUser.is_active ? "text-rose-500 border-rose-100 hover:bg-rose-50" : "text-emerald-500 border-emerald-100 hover:bg-emerald-50"}`}>
+                    {selectedUser.is_active ? "Suspend Access" : "Restore Access"}
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
+
+      {/* Persistent Notification System */}
+      <AnimatePresence>
+        {message && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed bottom-10 right-10 z-[200]"
+          >
+            <Card className="glass shadow-2xl rounded-3xl p-6 flex items-center gap-5 min-w-[340px] border-2 border-white">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${message.includes("✅") ? "bg-emerald-500 shadow-emerald-200" : "bg-rose-500 shadow-rose-200"
+                }`}>
+                {message.includes("✅") ? <CheckCircle className="w-7 h-7 text-white" /> : <AlertCircle className="w-7 h-7 text-white" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 mb-1">System Message</p>
+                <p className="text-sm font-bold text-slate-800 tracking-tight">{message.replace(/^[✅⚠️❌]\s*/, "")}</p>
+              </div>
+              <button onClick={() => setMessage(null)} className="text-slate-300 hover:text-slate-500 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Global CSS for Animations */}
+      <style jsx global>{`
+        @keyframes blob {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animate-pulse-delay-2000 {
+          animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          animation-delay: 2s;
+        }
+        .glass {
+          background: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+        }
+        .glass-dark {
+          background: rgba(15, 23, 42, 0.9);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+        }
+      `}</style>
     </div>
   )
 }

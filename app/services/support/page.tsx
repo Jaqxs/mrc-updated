@@ -7,9 +7,9 @@ export default function SupportPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">MRC</span>
+                <span className="text-white font-bold text-sm">HRN</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">MRC Careers</span>
+              <span className="text-xl font-bold text-gray-900">HRN Recruitment Agency</span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a href="/" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">
@@ -220,7 +220,7 @@ export default function SupportPage() {
           </p>
           <div className="bg-white p-6 rounded-xl shadow-lg border-2 border-red-200">
             <h3 className="text-2xl font-bold text-red-600 mb-2">Emergency Hotline</h3>
-            <p className="text-3xl font-bold text-gray-900 mb-4">+1-800-MRC-HELP</p>
+            <p className="text-3xl font-bold text-gray-900 mb-4">+1-800-HRN-HELP</p>
             <p className="text-gray-600">
               Available 24/7 for urgent job-related emergencies, visa issues, and critical support needs.
             </p>

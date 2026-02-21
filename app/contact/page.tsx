@@ -66,7 +66,7 @@ export default function ContactPage() {
       icon: Mail,
       title: "Email Support",
       description: "Send us a detailed message",
-      contact: "info@mrc.go.tz",
+      contact: "info@hrn.go.tz",
       hours: "Response within 24 hours",
       color: "bg-green-500",
     },
@@ -94,7 +94,7 @@ export default function ContactPage() {
       address: "123 Migration Street, Kinondoni District",
       city: "Dar es Salaam, Tanzania",
       phone: "+255 123 456 789",
-      email: "dar@mrc.go.tz",
+      email: "dar@hrn.go.tz",
       hours: "Mon-Fri: 8:00 AM - 5:00 PM",
       services: ["All Services", "Registration", "Legal Aid", "Emergency Support"],
     },
@@ -103,7 +103,7 @@ export default function ContactPage() {
       address: "456 Lake Victoria Road",
       city: "Mwanza, Tanzania",
       phone: "+255 234 567 890",
-      email: "mwanza@mrc.go.tz",
+      email: "mwanza@hrn.go.tz",
       hours: "Mon-Fri: 8:00 AM - 4:00 PM",
       services: ["Registration", "Pre-Departure Training", "Counseling"],
     },
@@ -112,7 +112,7 @@ export default function ContactPage() {
       address: "789 Kilimanjaro Avenue",
       city: "Arusha, Tanzania",
       phone: "+255 345 678 901",
-      email: "arusha@mrc.go.tz",
+      email: "arusha@hrn.go.tz",
       hours: "Mon-Fri: 8:00 AM - 4:00 PM",
       services: ["Registration", "Legal Consultation", "Reintegration Support"],
     },
@@ -121,7 +121,7 @@ export default function ContactPage() {
   const faqCategories = [
     {
       title: "Registration & Account",
-      questions: ["How do I register for MRC services?", "What documents do I need?", "How do I reset my password?"],
+      questions: ["How do I register for HRN services?", "What documents do I need?", "How do I reset my password?"],
     },
     {
       title: "Services & Support",
@@ -134,7 +134,12 @@ export default function ContactPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 relative overflow-hidden">
+      {/* Decorative blobs */}
+      <div className="absolute top-0 -left-10 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div className="absolute top-1/4 -right-10 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div className="absolute bottom-10 left-1/4 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+
       {/* Top Header Bar */}
       <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white py-2">
         <div className="container mx-auto px-4">
@@ -146,7 +151,7 @@ export default function ContactPage() {
               </span>
               <span className="flex items-center hover:text-blue-200 transition-colors">
                 <Mail className="w-3 h-3 mr-1" />
-                info@mrc.go.tz
+                info@hrn.go.tz
               </span>
             </div>
             <div className="flex items-center space-x-4">
@@ -164,14 +169,14 @@ export default function ContactPage() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <Link href="/" className="flex items-center space-x-3 group">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform duration-300">
                 <Globe className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                  MRC PORTAL
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  HRN PORTAL
                 </h1>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Migrant Resource Centre</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Migrant Resource Centre</p>
               </div>
             </Link>
             <nav className="hidden lg:flex items-center space-x-8">
@@ -292,14 +297,14 @@ export default function ContactPage() {
           {/* Contact Form and Info */}
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Contact Form */}
-            <div className="lg:col-span-2">
-              <Card className="shadow-xl border-0">
-                <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
-                  <CardTitle className="text-2xl flex items-center">
-                    <MessageSquare className="w-6 h-6 mr-3" />
+            <div className="lg:col-span-2 relative z-10">
+              <Card className="glass border-white/20 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-xl">
+                <CardHeader className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-10">
+                  <CardTitle className="text-3xl font-extrabold flex items-center tracking-tight">
+                    <MessageSquare className="w-8 h-8 mr-4" />
                     Send us a Message
                   </CardTitle>
-                  <CardDescription className="text-blue-100">
+                  <CardDescription className="text-blue-50 text-xl font-medium mt-2">
                     Fill out the form below and we'll get back to you within 24 hours
                   </CardDescription>
                 </CardHeader>
@@ -406,7 +411,8 @@ export default function ContactPage() {
                       <Button
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-lg"
+                        variant="gradient"
+                        className="w-full h-14 text-xl font-bold rounded-2xl shadow-xl shadow-blue-500/20"
                       >
                         {isSubmitting ? (
                           <>
@@ -649,7 +655,7 @@ export default function ContactPage() {
                   <Globe className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div className="font-bold text-lg">MRC PORTAL</div>
+                  <div className="font-bold text-lg">HRN PORTAL</div>
                   <div className="text-xs text-gray-400">Migrant Resource Centre</div>
                 </div>
               </div>
@@ -724,7 +730,7 @@ export default function ContactPage() {
                 </li>
                 <li className="flex items-center">
                   <Mail className="w-4 h-4 mr-2" />
-                  info@mrc.go.tz
+                  info@hrn.go.tz
                 </li>
                 <li className="flex items-center">
                   <MapPin className="w-4 h-4 mr-2" />

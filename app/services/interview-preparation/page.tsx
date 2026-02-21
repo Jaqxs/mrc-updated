@@ -7,9 +7,9 @@ export default function InterviewPreparationPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">MRC</span>
+                <span className="text-white font-bold text-sm">HRN</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">MRC Careers</span>
+              <span className="text-xl font-bold text-gray-900">HRN Recruitment Agency</span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a href="/" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">

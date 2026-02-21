@@ -27,11 +27,13 @@ import {
   GraduationCap,
 } from "lucide-react"
 import Link from "next/link"
+import { authService } from "@/lib/services/auth-service"
+import { ApiError } from "@/lib/api-client"
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [step, setStep] = useState(1)
-  const [loading, setLoading] = useState(false) 
+  const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -60,54 +62,51 @@ export default function RegisterPage() {
 
   const getStepProgress = () => (step / 4) * 100
 
-  // ✅ added function to call Django backend
-  const handleSubmit = async () => {
+  // ✅ Registration handler
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
     setLoading(true)
-    try {
-      const response = await fetch("https://1f657a1b9206.ngrok-free.app/api/accounts/register/", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true"
-        },
-        body: JSON.stringify({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          password: formData.password,
-          confirm_password: formData.confirmPassword,
-          nationality: formData.nationality,
-          current_location: formData.currentLocation,
-          education: formData.education,
-          experience: formData.experience,
-          skills: formData.skills,
-          preferred_countries: formData.preferredCountries,
-          job_categories: formData.jobCategories,
-          agree_terms: formData.agreeTerms,
-          agree_privacy: formData.agreePrivacy,
-        }),
-      })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        alert("❌ Registration failed: " + JSON.stringify(errorData))
-        setLoading(false)
-        return
-      }
+    try {
+      const data = await authService.register({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        confirm_password: formData.confirmPassword,
+        nationality: formData.nationality,
+        current_location: formData.currentLocation,
+        education: formData.education,
+        experience: formData.experience,
+        skills: formData.skills,
+        preferred_countries: formData.preferredCountries,
+        job_categories: formData.jobCategories,
+        agree_terms: formData.agreeTerms,
+        agree_privacy: formData.agreePrivacy,
+      })
 
       alert("✅ Account created successfully!")
       window.location.href = "/dashboard/jobseeker"
-    } catch (error) {
-      console.error("Error during registration:", error)
-      alert("⚠️ Something went wrong. Please try again.")
+    } catch (err: any) {
+      console.error("Registration error:", err)
+      if (err instanceof ApiError) {
+        alert(`❌ Registration failed: ${err.message || "Please check your information"}`)
+      } else {
+        alert("⚠️ Something went wrong. Please try again later.")
+      }
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 relative overflow-hidden">
+      {/* Decorative blobs */}
+      <div className="absolute top-0 -left-10 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div className="absolute top-0 -right-10 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+
       {/* Top Header Bar */}
       <div className="bg-blue-900 text-white py-2">
         <div className="container mx-auto px-4">
@@ -119,7 +118,7 @@ export default function RegisterPage() {
               </span>
               <span className="flex items-center">
                 <Mail className="w-3 h-3 mr-1" />
-                careers@mrc.go.tz
+                careers@hrn.go.tz
               </span>
             </div>
             <div className="flex items-center space-x-4">
@@ -138,13 +137,15 @@ export default function RegisterPage() {
       <header className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+            <Link href="/" className="flex items-center space-x-3 group">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform">
                 <Briefcase className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">MRC CAREERS</h1>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Global Job Recruitment</p>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  HRN RECRUITMENT AGENCY
+                </h1>
+                <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Global Job Recruitment</p>
               </div>
             </Link>
             <nav className="hidden lg:flex items-center space-x-8">
@@ -189,25 +190,25 @@ export default function RegisterPage() {
         <div className="max-w-4xl mx-auto">
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main Registration Form */}
-            <div className="lg:col-span-2">
-              <Card className="shadow-lg border-0">
-                <CardHeader className="bg-blue-600 text-white rounded-t-lg">
-                  <div className="flex items-center justify-between">
+            <div className="lg:col-span-2 relative z-10">
+              <Card className="glass border-white/20 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-xl">
+                <CardHeader className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-10">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
-                      <CardTitle className="text-2xl flex items-center">
-                        <User className="w-6 h-6 mr-2" />
+                      <CardTitle className="text-3xl font-extrabold flex items-center tracking-tight">
+                        <User className="w-10 h-10 mr-4" />
                         Create Your Job Seeker Account
                       </CardTitle>
-                      <CardDescription className="text-blue-100">
+                      <CardDescription className="text-blue-50 text-xl font-medium mt-2">
                         Join thousands finding overseas employment opportunities
                       </CardDescription>
                     </div>
-                    <Badge variant="secondary" className="bg-white text-blue-600">
+                    <Badge variant="secondary" className="bg-white/20 backdrop-blur-md text-white border-white/20 px-4 py-2 text-sm font-bold self-start md:self-center">
                       Step {step} of 4
                     </Badge>
                   </div>
-                  <div className="mt-4">
-                    <Progress value={getStepProgress()} className="h-2 bg-blue-500" />
+                  <div className="mt-8">
+                    <Progress value={getStepProgress()} className="h-3 bg-white/20" />
                   </div>
                 </CardHeader>
 
@@ -497,15 +498,15 @@ export default function RegisterPage() {
                       </div>
 
                       <div className="bg-gray-50 border rounded-lg p-6 max-h-64 overflow-y-auto">
-                        <h4 className="font-semibold text-gray-900 mb-3">MRC Careers Terms of Service</h4>
+                        <h4 className="font-semibold text-gray-900 mb-3">HRN Recruitment Agency Terms of Service</h4>
                         <div className="text-sm text-gray-700 space-y-3">
                           <p>
-                            By registering for MRC Careers, you agree to provide accurate and complete information about
+                            By registering for HRN Recruitment Agency, you agree to provide accurate and complete information about
                             your professional background and job preferences. You are responsible for maintaining the
                             confidentiality of your account credentials.
                           </p>
                           <p>
-                            MRC Careers is a job recruitment platform that connects job seekers with overseas employment
+                            HRN Recruitment Agency is a job recruitment platform that connects job seekers with overseas employment
                             opportunities. All job placements are subject to employer requirements, visa regulations,
                             and applicable laws.
                           </p>
@@ -534,7 +535,7 @@ export default function RegisterPage() {
                             <Link href="/terms" className="text-blue-600 hover:underline" target="_blank">
                               Terms of Service
                             </Link>{" "}
-                            and understand my rights and responsibilities as a job seeker on the MRC Careers platform.
+                            and understand my rights and responsibilities as a job seeker on the HRN Recruitment Agency platform.
                           </Label>
                         </div>
 
@@ -585,19 +586,19 @@ export default function RegisterPage() {
                     )}
 
                     {step < 4 ? (
-                      <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700 flex items-center">
+                      <Button onClick={handleNext} variant="gradient" className="flex items-center px-8">
                         Next
-                        <ArrowRight className="w-4 h-4 ml-2" />
+                        <ArrowRight className="w-5 h-5 ml-2" />
                       </Button>
                     ) : (
-                      // ✅ changed: final button now calls handleSubmit
                       <Button
-                        onClick={handleSubmit}
+                        onClick={handleRegister}
                         disabled={!formData.agreeTerms || !formData.agreePrivacy || loading}
-                        className="bg-green-600 hover:bg-green-700 flex items-center"
+                        variant="premium"
+                        className="flex items-center px-8 shadow-xl"
                       >
                         {loading ? "Creating..." : "Create Account"}
-                        <CheckCircle className="w-4 h-4 ml-2" />
+                        <CheckCircle className="w-5 h-5 ml-2" />
                       </Button>
                     )}
                   </div>
@@ -719,7 +720,7 @@ export default function RegisterPage() {
               {/* Benefits */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Why Join MRC Careers?</CardTitle>
+                  <CardTitle className="text-lg">Why Join HRN Recruitment Agency?</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -768,12 +769,12 @@ export default function RegisterPage() {
                 <Briefcase className="w-7 h-7 text-white" />
               </div>
               <div>
-                <div className="font-bold">MRC CAREERS</div>
+                <div className="font-bold">HRN RECRUITMENT AGENCY</div>
                 <div className="text-xs text-gray-400">Global Job Recruitment</div>
               </div>
             </div>
             <p className="text-sm text-gray-400 mb-4">
-              © 2024 MRC Careers - Connecting Talent with Global Opportunities
+              © 2024 HRN Recruitment Agency - Connecting Talent with Global Opportunities
             </p>
             <div className="flex justify-center space-x-6 text-sm">
               <Link href="/privacy" className="text-gray-400 hover:text-white">

@@ -3,11 +3,11 @@ import type { Metadata } from "next"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "MRC Careers – International Job Recruitment Agency",
+  title: "HRN Recruitment Agency – International Job Recruitment Agency",
   description:
     "Leading international job recruitment agency connecting talented professionals with overseas career opportunities. Find your dream job abroad with comprehensive placement and support services.",
   keywords: [
-    "MRC Careers",
+    "HRN Recruitment Agency",
     "international jobs",
     "overseas employment",
     "job recruitment",
@@ -21,21 +21,21 @@ export const metadata: Metadata = {
     "visa assistance",
     "work permits",
   ],
-  authors: [{ name: "MRC Careers Team" }],
+  authors: [{ name: "HRN Recruitment Agency Team" }],
   creator: "v0.dev",
   publisher: "Vercel",
   openGraph: {
-    title: "MRC Careers – International Job Recruitment Agency",
+    title: "HRN Recruitment Agency – International Job Recruitment Agency",
     description:
       "Leading international job recruitment agency connecting talented professionals with overseas career opportunities. Find your dream job abroad with comprehensive placement and support services.",
-    url: "https://www.mrccareers.org", // Replace with your actual domain
-    siteName: "MRC Careers",
+    url: "https://www.hrnagency.co.tz", // Updated domain
+    siteName: "HRN Recruitment Agency",
     images: [
       {
-        url: "/placeholder-logo.png", // Use your actual logo/image path
+        url: "/hrn-logo.png", // Use the new logo
         width: 800,
         height: 600,
-        alt: "MRC Careers - International Job Recruitment Agency Logo",
+        alt: "HRN Recruitment Agency - International Job Recruitment Agency Logo",
       },
     ],
     locale: "en_US",
@@ -43,10 +43,10 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "MRC Careers – International Job Recruitment Agency",
+    title: "HRN Recruitment Agency – International Job Recruitment Agency",
     description:
       "Leading international job recruitment agency connecting talented professionals with overseas career opportunities. Find your dream job abroad with comprehensive placement and support services.",
-    images: ["/placeholder-logo.png"], // Use your actual logo/image path
+    images: ["/hrn-logo.png"],
   },
   robots: {
     index: true,
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-    generator: 'v0.app'
+  generator: 'v0.app'
 }
 
 export default function RootLayout({

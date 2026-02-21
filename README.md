@@ -1,4 +1,4 @@
-# MRC web platform design
+# HRN web platform design
 
 *Automatically synced with your [v0.dev](https://v0.dev) deployments*
 
